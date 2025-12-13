@@ -31,7 +31,7 @@
                 <form method="post" id="gradeForm" class="row g-4">
                     {% csrf_token %}
                     <div class="col-md-12">
-                        <label for="{{ form.course.id_for_label }}" class="form-label text-uppercase small text-white-50">{{ form.course.label }}</label>
+                        <label for="{{ form.course.id_for_label }}" class="form-label text-uppercase small" style="color: var(--text-muted);">{{ form.course.label }}</label>
                         <select name="course" id="{{ form.course.id_for_label }}" class="form-select" required>
                             <option value="">Select a course...</option>
                             {% for course in form.course.field.queryset %}
@@ -45,7 +45,7 @@
                         {% endif %}
                     </div>
                     <div class="col-md-12">
-                        <label for="{{ form.student.id_for_label }}" class="form-label text-uppercase small text-white-50">{{ form.student.label }}</label>
+                        <label for="{{ form.student.id_for_label }}" class="form-label text-uppercase small" style="color: var(--text-muted);">{{ form.student.label }}</label>
                         <select name="student" id="{{ form.student.id_for_label }}" class="form-select" required>
                             <option value="">Select a student...</option>
                             {% for student in form.student.field.queryset %}
@@ -59,7 +59,7 @@
                         {% endif %}
                     </div>
                     <div class="col-md-12">
-                        <label for="{{ form.learning_outcome.id_for_label }}" class="form-label text-uppercase small text-white-50">{{ form.learning_outcome.label }}</label>
+                        <label for="{{ form.learning_outcome.id_for_label }}" class="form-label text-uppercase small" style="color: var(--text-muted);">{{ form.learning_outcome.label }}</label>
                         <select name="learning_outcome" id="{{ form.learning_outcome.id_for_label }}" class="form-select" required disabled>
                             <option value="">Select a course first</option>
                             {% if form.learning_outcome.value %}
@@ -74,7 +74,7 @@
                         {% endif %}
                     </div>
                     <div class="col-md-6">
-                        <label for="{{ form.score.id_for_label }}" class="form-label text-uppercase small text-white-50">{{ form.score.label }}</label>
+                        <label for="{{ form.score.id_for_label }}" class="form-label text-uppercase small" style="color: var(--text-muted);">{{ form.score.label }}</label>
                         {{ form.score }}
                         {% if form.score.errors %}
                             <div class="text-danger small mt-1">{{ form.score.errors }}</div>
@@ -82,8 +82,8 @@
                     </div>
                     <div class="col-md-6 d-flex align-items-end">
                         <div class="w-100">
-                            <div class="metric-subtext mb-2">Scales</div>
-                            <div class="d-flex flex-column gap-1 small text-white-50">
+                            <div style="color: var(--text-muted);" class="mb-2">Scales</div>
+                            <div class="d-flex flex-column gap-1 small" style="color: var(--text-muted);">
                                 <span>▪ 90 - 100 : Exceeds mastery</span>
                                 <span>▪ 75 - 89 : Meets mastery</span>
                                 <span>▪ ≤ 74 : Reinforcement needed</span>
@@ -111,7 +111,7 @@
                 <h4 class="mb-0">Submission Guide</h4>
             </div>
             <div class="cyber-panel-body">
-                <ul class="list-unstyled mb-4 metric-subtext">
+                <ul class="list-unstyled mb-4" style="color: var(--text-muted);">
                     <li class="mb-3">Pick a <strong>course</strong> first to reveal its full learning outcomes (names only).</li>
                     <li class="mb-3">Grades are automatically mapped to the correct Program Outcomes for analytics.</li>
                     <li class="mb-0">Students see changes instantly in their cyber dashboards.</li>
@@ -132,7 +132,7 @@
                         {% if dist %}
                             <div class="mb-4">
                                 <h5 class="mb-1">{{ course.code }} · {{ course.name }}</h5>
-                                <p class="metric-subtext mb-2">Learning outcome weights toward each Program Outcome.</p>
+                                <p style="color: var(--text-muted);" class="mb-2">Learning outcome weights toward each Program Outcome.</p>
                                 <div class="neon-table table-responsive">
                                     <table>
                                         <thead>
@@ -146,10 +146,10 @@
                                             <tr>
                                                 <td>
                                                     <strong>{{ po.program_outcome.code }}</strong>
-                                                    <div class="metric-subtext">{{ po.program_outcome.description }}</div>
+                                                    <div style="color: var(--text-muted);">{{ po.program_outcome.description }}</div>
                                                 </td>
                                                 <td>
-                                                    <ul class="mb-0 small text-white-50">
+                                                    <ul class="mb-0 small" style="color: var(--text-muted);">
                                                         {% for lo in po.learning_outcomes %}
                                                             <li>{{ lo.description }} — {{ lo.percentage }}%</li>
                                                         {% endfor %}

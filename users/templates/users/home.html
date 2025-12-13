@@ -40,15 +40,15 @@
             </div>
             <div class="cyber-panel-body">
                 {% if not user.is_authenticated %}
-                    <p class="metric-subtext">
+                    <p style="color: var(--text-muted);">
                         Sign in to access your personalized console and monitor Program Outcome progress.
                     </p>
                     <a href="{% url 'login' %}" class="glow-button">Login</a>
                 {% else %}
-                    <p class="metric-subtext mb-2">
+                    <p style="color: var(--text-muted);" class="mb-2">
                         You are logged in as <strong>{% if user.first_name or user.last_name %}{{ user.first_name }} {{ user.last_name }}{% else %}{{ user.username }}{% endif %}</strong> ({{ user.get_role_display }}){% if user.email %} · {{ user.email }}{% endif %}.
                     </p>
-                    <p class="metric-subtext mb-3">Choose your dashboard from the navigation menu to continue.</p>
+                    <p style="color: var(--text-muted);" class="mb-3">Choose your dashboard from the navigation menu to continue.</p>
                     <div class="d-flex flex-wrap gap-2">
                         {% if user.role == 'student' %}
                             <a href="{% url 'student:dashboard' %}" class="glow-button">Go to Dashboard</a>
