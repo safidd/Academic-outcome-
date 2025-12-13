@@ -1,0 +1,39 @@
+# IDE files (PyCharm/IntelliJ)
+.idea/
+inspectionProfiles/
+modules.xml
+*.iml
+workspace.xml
+
+# Virtual environment
+venv/
+env/
+ENV/
+
+# Database
+data/
+db/
+*.sqlite3
+*.db
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Environment variables
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+

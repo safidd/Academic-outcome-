@@ -1,0 +1,261 @@
+{% extends 'users/base.html' %}
+{% load dict_filters %}
+
+{% block title %}Enter Grade - Academic Outcome Tracker{% endblock %}
+
+{% block content %}
+<div class="cyber-hero mb-4">
+    <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-start">
+        <div>
+            <p class="cyber-eyebrow mb-2">Instructor · Grade Entry</p>
+            <h2 class="mb-2">Capture learning evidence with confidence.</h2>
+            <p class="metric-subtext mb-0">
+                Each submission instantly updates student dashboards, Program Outcome signals, and departmental analytics.
+            </p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <span class="cyber-chip">Mapped POs update automatically</span>
+            <span class="cyber-chip">Validation enabled</span>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="cyber-panel">
+            <div class="cyber-panel-header d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">Grade Details</h4>
+                <span class="cyber-chip">Required fields</span>
+            </div>
+            <div class="cyber-panel-body">
+                <form method="post" id="gradeForm" class="row g-4">
+                    {% csrf_token %}
+                    <div class="col-md-12">
+                        <label for="{{ form.course.id_for_label }}" class="form-label text-uppercase small text-white-50">{{ form.course.label }}</label>
+                        <select name="course" id="{{ form.course.id_for_label }}" class="form-select" required>
+                            <option value="">Select a course...</option>
+                            {% for course in form.course.field.queryset %}
+                                <option value="{{ course.id }}" {% if form.course.value == course.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ course.code }} - {{ course.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        {% if form.course.errors %}
+                            <div class="text-danger small mt-1">{{ form.course.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-12">
+                        <label for="{{ form.student.id_for_label }}" class="form-label text-uppercase small text-white-50">{{ form.student.label }}</label>
+                        <select name="student" id="{{ form.student.id_for_label }}" class="form-select" required>
+                            <option value="">Select a student...</option>
+                            {% for student in form.student.field.queryset %}
+                                <option value="{{ student.id }}" {% if form.student.value == student.id|stringformat:"s" %}selected{% endif %}>
+                                    {% if student.first_name or student.last_name %}{{ student.first_name }} {{ student.last_name }}{% else %}{{ student.username }}{% endif %} ({{ student.email|default:student.username }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                        {% if form.student.errors %}
+                            <div class="text-danger small mt-1">{{ form.student.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-12">
+                        <label for="{{ form.learning_outcome.id_for_label }}" class="form-label text-uppercase small text-white-50">{{ form.learning_outcome.label }}</label>
+                        <select name="learning_outcome" id="{{ form.learning_outcome.id_for_label }}" class="form-select" required disabled>
+                            <option value="">Select a course first</option>
+                            {% if form.learning_outcome.value %}
+                                {% for lo in form.learning_outcome.field.queryset %}
+                                    <option value="{{ lo.id }}" {% if form.learning_outcome.value == lo.id %}selected{% endif %}>{{ lo.description }}</option>
+                                {% endfor %}
+                            {% endif %}
+                        </select>
+                        <small class="metric-subtext d-block mt-1">Learning outcome names display without abbreviations to keep PO alignment clear.</small>
+                        {% if form.learning_outcome.errors %}
+                            <div class="text-danger small mt-1">{{ form.learning_outcome.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label for="{{ form.score.id_for_label }}" class="form-label text-uppercase small text-white-50">{{ form.score.label }}</label>
+                        {{ form.score }}
+                        {% if form.score.errors %}
+                            <div class="text-danger small mt-1">{{ form.score.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6 d-flex align-items-end">
+                        <div class="w-100">
+                            <div class="metric-subtext mb-2">Scales</div>
+                            <div class="d-flex flex-column gap-1 small text-white-50">
+                                <span>▪ 90 - 100 : Exceeds mastery</span>
+                                <span>▪ 75 - 89 : Meets mastery</span>
+                                <span>▪ ≤ 74 : Reinforcement needed</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% if form.non_field_errors %}
+                        <div class="col-12">
+                            <div class="alert alert-danger mb-0">
+                                {{ form.non_field_errors }}
+                            </div>
+                        </div>
+                    {% endif %}
+                    <div class="col-12 d-flex flex-wrap gap-2 justify-content-end">
+                        <a href="{% url 'instructor:dashboard' %}" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="glow-button">Save Grade</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="cyber-panel h-100">
+            <div class="cyber-panel-header">
+                <h4 class="mb-0">Submission Guide</h4>
+            </div>
+            <div class="cyber-panel-body">
+                <ul class="list-unstyled mb-4 metric-subtext">
+                    <li class="mb-3">Pick a <strong>course</strong> first to reveal its full learning outcomes (names only).</li>
+                    <li class="mb-3">Grades are automatically mapped to the correct Program Outcomes for analytics.</li>
+                    <li class="mb-0">Students see changes instantly in their cyber dashboards.</li>
+                </ul>
+                <div class="alert alert-info mb-0">
+                    Need to add a new learning outcome or course? Contact the department administrator so Program Outcome mappings remain accurate.
+                </div>
+            </div>
+        </div>
+        {% if course_distributions %}
+        <div class="cyber-panel h-100 mt-4">
+            <div class="cyber-panel-header">
+                <h4 class="mb-0">Program Outcome distributions</h4>
+            </div>
+            <div class="cyber-panel-body">
+                {% for course in courses %}
+                    {% with dist=course_distributions|get_item:course.id %}
+                        {% if dist %}
+                            <div class="mb-4">
+                                <h5 class="mb-1">{{ course.code }} · {{ course.name }}</h5>
+                                <p class="metric-subtext mb-2">Learning outcome weights toward each Program Outcome.</p>
+                                <div class="neon-table table-responsive">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Program Outcome</th>
+                                                <th>Learning Outcomes</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for po in dist %}
+                                            <tr>
+                                                <td>
+                                                    <strong>{{ po.program_outcome.code }}</strong>
+                                                    <div class="metric-subtext">{{ po.program_outcome.description }}</div>
+                                                </td>
+                                                <td>
+                                                    <ul class="mb-0 small text-white-50">
+                                                        {% for lo in po.learning_outcomes %}
+                                                            <li>{{ lo.description }} — {{ lo.percentage }}%</li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% endwith %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Function to get CSRF token from cookies
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    // Get CSRF token from form or cookie
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || getCookie('csrftoken');
+    
+    // Wait for DOM to be ready
+    document.addEventListener('DOMContentLoaded', function() {
+        const courseSelect = document.getElementById('{{ form.course.id_for_label }}');
+        const learningOutcomeSelect = document.getElementById('{{ form.learning_outcome.id_for_label }}');
+        
+        if (courseSelect) {
+            courseSelect.addEventListener('change', function() {
+                const courseId = this.value;
+                
+                if (!learningOutcomeSelect) {
+                    console.error('Learning outcome select not found');
+                    return;
+                }
+                
+                // Clear and show loading
+                learningOutcomeSelect.innerHTML = '<option value="">Loading...</option>';
+                learningOutcomeSelect.disabled = true;
+
+                if (courseId) {
+                    // Build the URL using template tag
+                    const baseUrl = '{% url "instructor:get_learning_outcomes" 999 %}';
+                    const url = baseUrl.replace('999', courseId);
+                    
+                    fetch(url, {
+                        method: 'GET',
+                        headers: {
+                            'X-CSRFToken': csrftoken || '',
+                            'Content-Type': 'application/json',
+                        },
+                        credentials: 'same-origin'
+                    })
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            learningOutcomeSelect.innerHTML = '<option value="">Select Learning Outcome</option>';
+                            
+                            if (data.learning_outcomes && data.learning_outcomes.length > 0) {
+                                data.learning_outcomes.forEach(lo => {
+                                    const option = document.createElement('option');
+                                    option.value = lo.id;
+                                    option.textContent = lo.description;
+                                    learningOutcomeSelect.appendChild(option);
+                                });
+                            } else {
+                                learningOutcomeSelect.innerHTML = '<option value="">No learning outcomes found</option>';
+                            }
+                            learningOutcomeSelect.disabled = false;
+                        })
+                        .catch((error) => {
+                            console.error('Error loading learning outcomes:', error);
+                            learningOutcomeSelect.innerHTML = '<option value="">Error loading learning outcomes</option>';
+                            learningOutcomeSelect.disabled = false;
+                        });
+                } else {
+                    learningOutcomeSelect.innerHTML = '<option value="">Select a course first</option>';
+                    learningOutcomeSelect.disabled = true;
+                }
+            });
+        }
+    });
+    
+</script>
+{% endblock %}

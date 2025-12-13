@@ -1,0 +1,37 @@
+{% extends 'users/base.html' %}
+
+{% block title %}Permission Denied - Academic Outcome Tracker{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card border-danger">
+            <div class="card-body text-center">
+                <h1 class="display-1 text-danger">403</h1>
+                <h2 class="card-title">Permission Denied</h2>
+                <p class="card-text">
+                    You don't have permission to access this page.
+                </p>
+                <p class="text-muted">
+                    This page is restricted to specific user roles. Please make sure you're logged in with the correct account.
+                </p>
+                <div class="mt-4">
+                    <a href="{% url 'home' %}" class="btn btn-primary me-2">Go to Home</a>
+                    {% if user.is_authenticated %}
+                        {% if user.role == 'student' %}
+                            <a href="{% url 'student:dashboard' %}" class="btn btn-secondary">My Dashboard</a>
+                        {% elif user.role == 'instructor' %}
+                            <a href="{% url 'instructor:dashboard' %}" class="btn btn-secondary">My Dashboard</a>
+                        {% elif user.role == 'department_head' %}
+                            <a href="{% url 'head:dashboard' %}" class="btn btn-secondary">My Dashboard</a>
+                        {% endif %}
+                    {% else %}
+                        <a href="{% url 'login' %}" class="btn btn-secondary">Login</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

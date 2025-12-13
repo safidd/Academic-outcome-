@@ -1,0 +1,224 @@
+{% extends 'users/base.html' %}
+{% load dict_filters %}
+
+{% block title %}Instructor Dashboard - Academic Outcome Tracker{% endblock %}
+
+{% block content %}
+<div class="cyber-hero">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-3">
+        <div>
+            <p class="cyber-eyebrow mb-2">Instructor Interface</p>
+            <h2 class="mb-2">Course Orchestration Console</h2>
+            <p class="metric-subtext mb-0">
+                Monitor courses, sync grades, and keep student progression aligned with program outcomes.
+            </p>
+        </div>
+        <div class="d-flex flex-wrap gap-3">
+            <span class="cyber-chip">Courses: {{ courses|length }}</span>
+            <span class="cyber-chip">Recent grades: {{ recent_grades|length }}</span>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="cyber-panel">
+            <div class="cyber-panel-header">
+                <h4 class="mb-0">Your Courses</h4>
+            </div>
+            <div class="cyber-panel-body">
+                {% if courses %}
+                    <div class="accordion" id="coursesAccordion">
+                        {% for course in courses %}
+                            <div class="accordion-item mb-2" style="background: var(--cyber-surface); border: 1px solid var(--cyber-border-soft);">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#course{{ course.id }}" aria-expanded="false" style="background: var(--cyber-surface-alt); color: var(--cyber-text);">
+                                        <div class="w-100 d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <strong>{{ course.code }}</strong>
+                                                <div class="metric-subtext small">{{ course.name }}</div>
+                                            </div>
+                                            <span class="badge bg-dark border border-info text-info ms-2">Active</span>
+                                        </div>
+                                    </button>
+                                </h2>
+                                <div id="course{{ course.id }}" class="accordion-collapse collapse" data-bs-parent="#coursesAccordion">
+                                    <div class="accordion-body" style="background: var(--cyber-surface);">
+                                        <div class="metric-subtext mb-3"><strong>Program Outcome Mappings:</strong></div>
+                                        {% with dist=course_distributions|get_item:course.id %}
+                                            {% if dist %}
+                                                <ul class="list-unstyled mb-0">
+                                                    {% for po in dist %}
+                                                        <li class="mb-3 pb-2 border-bottom border-opacity-25">
+                                                            <strong class="text-info">{{ po.program_outcome.code }}</strong>
+                                                            <div class="metric-subtext small mb-2">{{ po.program_outcome.description }}</div>
+                                                            <div class="small text-white-50">Contributions from Learning Outcomes:</div>
+                                                            <ul class="mt-1 ms-3 mb-0 small text-white-50">
+                                                                {% for lo in po.learning_outcomes %}
+                                                                    <li>{{ lo.description|truncatewords:10 }} — <span class="text-info fw-semibold">{{ lo.percentage }}%</span></li>
+                                                                {% endfor %}
+                                                            </ul>
+                                                        </li>
+                                                    {% endfor %}
+                                                </ul>
+                                            {% else %}
+                                                <p class="metric-subtext small mb-0">No Program Outcome mappings defined yet.</p>
+                                            {% endif %}
+                                        {% endwith %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning mb-0">
+                        You are not teaching any courses yet. Please contact the admin to assign courses.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="cyber-panel">
+            <div class="cyber-panel-header d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">Enter Grades</h4>
+                <a href="{% url 'instructor:enter_grade' %}" class="glow-button">New Entry</a>
+            </div>
+            <div class="cyber-panel-body">
+                <p class="metric-subtext mb-0">
+                    Capture learning outcome performance to immediately refresh student dashboards.
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="cyber-panel h-100">
+            <div class="cyber-panel-header d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">Recent Grades Entered</h4>
+                <span class="cyber-chip">Auto-sync</span>
+            </div>
+            <div class="cyber-panel-body neon-table">
+                {% if recent_grades %}
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Student</th>
+                                    <th>Course</th>
+                                    <th>Learning Outcome</th>
+                                    <th class="text-end">Score</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for grade in recent_grades %}
+                                <tr>
+                                    <td>
+                                        <strong>{% if grade.student.first_name or grade.student.last_name %}{{ grade.student.first_name }} {{ grade.student.last_name }}{% else %}{{ grade.student.username }}{% endif %}</strong>
+                                        <div class="metric-subtext">{{ grade.student.email|default:grade.student.username }}</div>
+                                    </td>
+                                    <td>
+                                        <strong>{{ grade.course.code }}</strong>
+                                        <div class="metric-subtext">{{ grade.course.name }}</div>
+                                    </td>
+                                    <td>
+                                        <div class="metric-subtext text-uppercase small text-white-50">Learning Outcome</div>
+                                        <div>{{ grade.learning_outcome.description }}</div>
+                                    </td>
+                                    <td class="text-end">
+                                        <span class="badge bg-dark border border-info text-info">{{ grade.score }}%</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info mb-0">
+                        No grades entered yet. Start by selecting a course and learning outcome.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if course_po_summaries %}
+<div class="cyber-panel">
+    <div class="cyber-panel-header d-flex justify-content-between align-items-center">
+        <h4 class="mb-0">Course Program Outcome Health</h4>
+        <span class="cyber-chip">Instructor view</span>
+    </div>
+    <div class="cyber-panel-body">
+        {% for entry in course_po_summaries %}
+            <div class="mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div>
+                        <h5 class="mb-1">{{ entry.course.code }} · {{ entry.course.name }}</h5>
+                        <p class="metric-subtext mb-0">Average PO mastery across enrolled students</p>
+                    </div>
+                    <span class="cyber-chip">{{ entry.po_scores|length }} outcomes</span>
+                </div>
+                {% if entry.po_scores %}
+                    <div class="neon-table table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Program Outcome</th>
+                                    <th class="text-end">Average</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for code, value in entry.po_scores.items %}
+                                <tr>
+                                    <td><strong>{{ code }}</strong></td>
+                                    <td class="text-end">
+                                        <span class="badge bg-dark border border-info text-info fw-semibold">{{ value }}%</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="mt-3">
+                        <p class="cyber-eyebrow mb-2">Program Outcome calculation detail</p>
+                        {% if entry.po_distribution %}
+                            <div class="neon-table table-responsive">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Program Outcome</th>
+                                            <th>Learning Outcome Contributions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for dist in entry.po_distribution %}
+                                        <tr>
+                                            <td>
+                                                <strong>{{ dist.program_outcome.code }}</strong>
+                                                <div class="metric-subtext">{{ dist.program_outcome.description }}</div>
+                                            </td>
+                                            <td>
+                                                <ul class="mb-0 small text-white-50">
+                                                    {% for lo in dist.learning_outcomes %}
+                                                        <li>{{ lo.description }} — {{ lo.percentage }}%</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <p class="metric-subtext mb-0">No Program Outcome mappings defined for this course yet.</p>
+                        {% endif %}
+                    </div>
+                {% else %}
+                    <div class="alert alert-info mb-0">
+                        No Program Outcome data yet for this course.
+                    </div>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

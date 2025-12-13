@@ -1,0 +1,277 @@
+{% extends 'users/base.html' %}
+{% load dict_filters %}
+
+{% block title %}Department Head Dashboard - Academic Outcome Tracker{% endblock %}
+
+{% block content %}
+<div class="cyber-hero">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-3">
+        <div>
+            <p class="cyber-eyebrow mb-2">Department Head Interface</p>
+            <h2 class="mb-2">Strategic Outcomes Console</h2>
+            <p class="metric-subtext mb-0">
+                Monitor student cohorts, track program health, and surface insights that guide accreditation decisions.
+            </p>
+        </div>
+        <div class="d-flex flex-wrap gap-3">
+            <span class="cyber-chip">Program outcomes {{ tracked_po_count }}/{{ program_outcome_count }}</span>
+            <span class="cyber-chip">Students tracked {{ total_students|default:0 }}</span>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="cyber-panel">
+            <div class="cyber-panel-body">
+                <p class="cyber-eyebrow mb-1">Students in cohort</p>
+                <p class="metric-value">{{ total_students|default:0 }}</p>
+                <p class="metric-subtext mb-0">Ensure instructors keep enrollment synchronized.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="cyber-panel">
+            <div class="cyber-panel-body">
+                <p class="cyber-eyebrow mb-1">Avg PO performance</p>
+                <p class="metric-value">{{ average_score }}%</p>
+                <span class="badge {{ health_status.badge_class }} px-3 py-2">{{ health_status.label }}</span>
+                <p class="metric-subtext mt-3 mb-0">{{ health_status.message }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="cyber-panel">
+            <div class="cyber-panel-body">
+                <p class="cyber-eyebrow mb-1">Configured outcomes</p>
+                <p class="metric-value">{{ program_outcome_count }}</p>
+                <p class="metric-subtext mb-0">Align curriculum and assessment coverage.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="cyber-panel">
+            <div class="cyber-panel-body">
+                <p class="cyber-eyebrow mb-1">Tracked outcomes</p>
+                <p class="metric-value">{{ tracked_po_count }}</p>
+                <p class="metric-subtext mb-0">Capture learning outcome grades to unlock analytics.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-lg-7">
+        <div class="cyber-panel h-100">
+            <div class="cyber-panel-header d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">Program Outcome Signals</h4>
+                {% if department_averages %}
+                    <span class="cyber-chip">Auto-sync enabled</span>
+                {% endif %}
+            </div>
+            <div class="cyber-panel-body neon-table">
+                {% if department_averages %}
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Program Outcome</th>
+                                    <th width="40%">Progress</th>
+                                    <th class="text-end">Average</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for po in program_outcomes %}
+                                    {% with po_value=department_averages|get_item:po.code %}
+                                    <tr>
+                                        <td>
+                                            <div class="fw-semibold">{{ po.code }}</div>
+                                            <div class="metric-subtext">{{ po.description }}</div>
+                                        </td>
+                                        <td>
+                                            <div class="progress">
+                                                <div class="progress-bar" role="progressbar"
+                                                     data-progress="{{ po_value|default:0 }}"
+                                                     aria-valuenow="{{ po_value|default:0 }}"
+                                                     aria-valuemin="0" aria-valuemax="100"></div>
+                                            </div>
+                                        </td>
+                                        <td class="text-end">
+                                            <span class="badge bg-dark border border-info text-info fw-semibold">
+                                                {{ po_value|default:0 }}%
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    {% endwith %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning mb-0">
+                        No Program Outcome averages yet. Capture student performance to generate insights.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="cyber-panel h-100">
+            <div class="cyber-panel-header">
+                <h4 class="mb-0">Leadership Insights</h4>
+            </div>
+            <div class="cyber-panel-body">
+                {% for insight in insights %}
+                    <div class="p-3 insight-tile mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="badge bg-info-subtle text-info">{{ insight.badge }}</span>
+                            {% if insight.trend %}
+                                <small class="text-success fw-semibold">{{ insight.trend }}</small>
+                            {% endif %}
+                        </div>
+                        <h5 class="mb-1">{{ insight.title }}</h5>
+                        <p class="metric-subtext mb-0">{{ insight.detail }}</p>
+                    </div>
+                {% endfor %}
+            </div>
+            <div class="text-center pb-4">
+                <button class="glow-button">Export Snapshot</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-6">
+        <div class="cyber-panel h-100">
+            <div class="cyber-panel-header">
+                <h4 class="mb-0">Top Performing Outcome</h4>
+            </div>
+            <div class="cyber-panel-body">
+                {% if top_po %}
+                    <p class="cyber-eyebrow mb-1">{{ top_po.code }}</p>
+                    <p class="metric-value">{{ top_po.value }}%</p>
+                    <p class="metric-subtext">{{ top_po.description }}</p>
+                    <div class="alert alert-success mb-0">
+                        Students consistently demonstrate mastery. Capture supporting artifacts to celebrate success.
+                    </div>
+                {% else %}
+                    <p class="metric-subtext mb-0">Insights will appear once students submit outcomes.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="cyber-panel h-100">
+            <div class="cyber-panel-header">
+                <h4 class="mb-0">Outcome Needing Focus</h4>
+            </div>
+            <div class="cyber-panel-body">
+                {% if low_po %}
+                    <p class="cyber-eyebrow mb-1">{{ low_po.code }}</p>
+                    <p class="metric-value" style="color: var(--cyber-danger);">{{ low_po.value }}%</p>
+                    <p class="metric-subtext">{{ low_po.description }}</p>
+                    <div class="alert alert-danger mb-0">
+                        Launch an intervention plan. Review mapped learning outcomes and adjust curriculum alignment.
+                    </div>
+                {% else %}
+                    <p class="metric-subtext mb-0">No data yet. Once outcomes are tracked, focus areas appear here.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if course_po_breakdown %}
+<div class="cyber-panel mt-4">
+    <div class="cyber-panel-header d-flex justify-content-between align-items-center">
+        <h4 class="mb-0">Course-Level Outcome Detail</h4>
+        <span class="cyber-chip">Department view</span>
+    </div>
+    <div class="cyber-panel-body">
+        {% for entry in course_po_breakdown %}
+            <div class="mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div>
+                        <h5 class="mb-1">{{ entry.course.code }} · {{ entry.course.name }}</h5>
+                        <p class="metric-subtext mb-0">Average PO contribution across all students</p>
+                    </div>
+                    <span class="cyber-chip">{{ entry.po_scores|length }} outcomes</span>
+                </div>
+                {% if entry.po_scores %}
+                    <div class="neon-table table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Program Outcome</th>
+                                    <th class="text-end">Average</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for code, value in entry.po_scores.items %}
+                                <tr>
+                                    <td><strong>{{ code }}</strong></td>
+                                    <td class="text-end">
+                                        <span class="badge bg-dark border border-info text-info fw-semibold">{{ value }}%</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="mt-3">
+                        <p class="cyber-eyebrow mb-2">Program Outcome calculation</p>
+                        {% if entry.po_distribution %}
+                            <div class="neon-table table-responsive">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Program Outcome</th>
+                                            <th>Learning Outcome Distribution</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for dist in entry.po_distribution %}
+                                        <tr>
+                                            <td>
+                                                <strong>{{ dist.program_outcome.code }}</strong>
+                                                <div class="metric-subtext">{{ dist.program_outcome.description }}</div>
+                                            </td>
+                                            <td>
+                                                <ul class="mb-0 small text-white-50">
+                                                    {% for lo in dist.learning_outcomes %}
+                                                        <li>{{ lo.description }} — {{ lo.percentage }}%</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <p class="metric-subtext mb-0">No Program Outcome mappings defined for this course.</p>
+                        {% endif %}
+                    </div>
+                {% else %}
+                    <div class="alert alert-info mb-0">
+                        No PO coverage recorded for this course yet.
+                    </div>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.progress-bar[data-progress]').forEach(function (bar) {
+            const value = bar.getAttribute('data-progress') || '0';
+            bar.style.width = `${value}%`;
+        });
+    });
+</script>
+{% endblock %}
