@@ -2,11 +2,15 @@ from django.shortcuts import render
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
+from django.db.models import Count, Avg
 from .models import ProgramOutcome
+from courses.models import Course
+from grades.models import Grade
 from .utils import (
     calculate_department_po_averages,
     calculate_department_course_po_scores,
     build_course_po_distributions,
+    calculate_po_scores,
 )
 
 
@@ -101,6 +105,59 @@ def head_dashboard(request):
     for entry in course_po_breakdown:
         entry['po_distribution'] = distribution_map.get(entry['course'].id, [])
     
+    # Get all instructors with detailed information
+    instructors = User.objects.filter(role='instructor').select_related().order_by('username')
+    instructors_list = []
+    for instructor in instructors:
+        courses_taught = Course.objects.filter(instructor=instructor)
+        total_grades = Grade.objects.filter(course__instructor=instructor).count()
+        total_students_in_courses = Grade.objects.filter(course__instructor=instructor).values('student').distinct().count()
+        
+        instructors_list.append({
+            'instructor': instructor,
+            'courses': courses_taught,
+            'courses_count': courses_taught.count(),
+            'total_grades': total_grades,
+            'total_students': total_students_in_courses,
+        })
+    
+    # Get all students with detailed information
+    students = User.objects.filter(role='student').select_related().order_by('username')
+    students_list = []
+    for student in students:
+        student_grades = Grade.objects.filter(student=student).select_related('course', 'learning_outcome')
+        courses_enrolled = student_grades.values('course').distinct().count()
+        total_grades_count = student_grades.count()
+        avg_grade = student_grades.aggregate(avg=Avg('score'))['avg'] or 0
+        student_po_scores = calculate_po_scores(student)
+        avg_po_score = sum(student_po_scores.values()) / len(student_po_scores) if student_po_scores else 0
+        
+        students_list.append({
+            'student': student,
+            'grades': student_grades,
+            'courses_count': courses_enrolled,
+            'total_grades': total_grades_count,
+            'average_grade': round(avg_grade, 1),
+            'po_scores': student_po_scores,
+            'average_po_score': round(avg_po_score, 1),
+        })
+    
+    # Get all courses with detailed information
+    all_courses = Course.objects.select_related('instructor').order_by('code')
+    courses_list = []
+    for course in all_courses:
+        course_grades = Grade.objects.filter(course=course)
+        students_in_course = course_grades.values('student').distinct().count()
+        total_grades_count = course_grades.count()
+        avg_course_grade = course_grades.aggregate(avg=Avg('score'))['avg'] or 0
+        
+        courses_list.append({
+            'course': course,
+            'students_count': students_in_course,
+            'total_grades': total_grades_count,
+            'average_grade': round(avg_course_grade, 1),
+        })
+    
     return render(request, 'outcomes/head_dashboard.html', {
         'user': request.user,
         'department_averages': department_averages,
@@ -114,4 +171,7 @@ def head_dashboard(request):
         'health_status': health_status,
         'insights': insights,
         'course_po_breakdown': course_po_breakdown,
+        'instructors_list': instructors_list,
+        'students_list': students_list,
+        'courses_list': courses_list,
     })

@@ -268,6 +268,279 @@
     </div>
 </div>
 {% endif %}
+
+<!-- Comprehensive Management Section -->
+<div class="cyber-panel mt-4">
+    <div class="cyber-panel-header d-flex justify-content-between align-items-center">
+        <h4 class="mb-0">Department Management Console</h4>
+        <span class="cyber-chip">Full Access Control</span>
+    </div>
+    <div class="cyber-panel-body">
+        <div class="accordion" id="managementAccordion">
+            <!-- Instructors Section -->
+            <div class="accordion-item mb-2" style="background: var(--white); border: 2px solid var(--border);">
+                <h2 class="accordion-header">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#instructorsSection" aria-expanded="true" style="background: var(--bg-surface); color: var(--text-primary);">
+                        <div class="w-100 d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>All Instructors</strong>
+                                <div style="color: var(--text-muted); font-size: 0.875rem;">View all teaching staff and their course details</div>
+                            </div>
+                            <span class="badge ms-2" style="background: var(--accent); color: var(--white); border: none;">{{ instructors_list|length }} instructors</span>
+                        </div>
+                    </button>
+                </h2>
+                <div id="instructorsSection" class="accordion-collapse collapse show" data-bs-parent="#managementAccordion">
+                    <div class="accordion-body" style="background: var(--white);">
+                        {% if instructors_list %}
+                            {% for instructor_data in instructors_list %}
+                                <div class="mb-4 pb-3 {% if not forloop.last %}border-bottom{% endif %}">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div>
+                                            <h5 class="mb-1">
+                                                {% if instructor_data.instructor.first_name or instructor_data.instructor.last_name %}
+                                                    {{ instructor_data.instructor.first_name }} {{ instructor_data.instructor.last_name }}
+                                                {% else %}
+                                                    {{ instructor_data.instructor.username }}
+                                                {% endif %}
+                                            </h5>
+                                            <p style="color: var(--text-muted);" class="mb-0">
+                                                Username: <strong>{{ instructor_data.instructor.username }}</strong>
+                                                {% if instructor_data.instructor.email %} · {{ instructor_data.instructor.email }}{% endif %}
+                                            </p>
+                                        </div>
+                                        <div class="text-end">
+                                            <span class="badge fw-semibold" style="background: var(--navy); color: var(--accent); border: 2px solid var(--accent); margin-left: 0.5rem;">
+                                                {{ instructor_data.courses_count }} courses
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="row g-3 mb-3">
+                                        <div class="col-md-4">
+                                            <div class="p-3" style="background: var(--bg-surface); border-radius: 12px;">
+                                                <p class="cyber-eyebrow mb-1">Courses Taught</p>
+                                                <p class="metric-value" style="font-size: 2rem;">{{ instructor_data.courses_count }}</p>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="p-3" style="background: var(--bg-surface); border-radius: 12px;">
+                                                <p class="cyber-eyebrow mb-1">Total Grades Entered</p>
+                                                <p class="metric-value" style="font-size: 2rem;">{{ instructor_data.total_grades }}</p>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="p-3" style="background: var(--bg-surface); border-radius: 12px;">
+                                                <p class="cyber-eyebrow mb-1">Students Enrolled</p>
+                                                <p class="metric-value" style="font-size: 2rem;">{{ instructor_data.total_students }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% if instructor_data.courses %}
+                                        <div class="neon-table table-responsive">
+                                            <table>
+                                                <thead>
+                                                    <tr>
+                                                        <th>Course Code</th>
+                                                        <th>Course Name</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for course in instructor_data.courses %}
+                                                    <tr>
+                                                        <td><strong>{{ course.code }}</strong></td>
+                                                        <td>{{ course.name }}</td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    {% else %}
+                                        <div class="alert alert-info mb-0">
+                                            No courses assigned to this instructor yet.
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="alert alert-info mb-0">
+                                No instructors found in the system.
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Students Section -->
+            <div class="accordion-item mb-2" style="background: var(--white); border: 2px solid var(--border);">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#studentsSection" aria-expanded="false" style="background: var(--bg-surface); color: var(--text-primary);">
+                        <div class="w-100 d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>All Students</strong>
+                                <div style="color: var(--text-muted); font-size: 0.875rem;">View all students and their performance details</div>
+                            </div>
+                            <span class="badge ms-2" style="background: var(--accent); color: var(--white); border: none;">{{ students_list|length }} students</span>
+                        </div>
+                    </button>
+                </h2>
+                <div id="studentsSection" class="accordion-collapse collapse" data-bs-parent="#managementAccordion">
+                    <div class="accordion-body" style="background: var(--white);">
+                        {% if students_list %}
+                            {% for student_data in students_list %}
+                                <div class="mb-4 pb-3 {% if not forloop.last %}border-bottom{% endif %}">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div>
+                                            <h5 class="mb-1">
+                                                {% if student_data.student.first_name or student_data.student.last_name %}
+                                                    {{ student_data.student.first_name }} {{ student_data.student.last_name }}
+                                                {% else %}
+                                                    {{ student_data.student.username }}
+                                                {% endif %}
+                                            </h5>
+                                            <p style="color: var(--text-muted);" class="mb-0">
+                                                Username: <strong>{{ student_data.student.username }}</strong>
+                                                {% if student_data.student.email %} · {{ student_data.student.email }}{% endif %}
+                                            </p>
+                                        </div>
+                                        <div class="text-end">
+                                            <span class="badge fw-semibold" style="background: var(--navy); color: var(--accent); border: 2px solid var(--accent); margin-left: 0.5rem;">
+                                                {{ student_data.courses_count }} courses
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="row g-3 mb-3">
+                                        <div class="col-md-3">
+                                            <div class="p-3" style="background: var(--bg-surface); border-radius: 12px;">
+                                                <p class="cyber-eyebrow mb-1">Courses Enrolled</p>
+                                                <p class="metric-value" style="font-size: 2rem;">{{ student_data.courses_count }}</p>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="p-3" style="background: var(--bg-surface); border-radius: 12px;">
+                                                <p class="cyber-eyebrow mb-1">Total Grades</p>
+                                                <p class="metric-value" style="font-size: 2rem;">{{ student_data.total_grades }}</p>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="p-3" style="background: var(--bg-surface); border-radius: 12px;">
+                                                <p class="cyber-eyebrow mb-1">Average Grade</p>
+                                                <p class="metric-value" style="font-size: 2rem;">{{ student_data.average_grade }}%</p>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="p-3" style="background: var(--bg-surface); border-radius: 12px;">
+                                                <p class="cyber-eyebrow mb-1">Avg PO Score</p>
+                                                <p class="metric-value" style="font-size: 2rem;">{{ student_data.average_po_score }}%</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% if student_data.po_scores %}
+                                        <div class="mb-3">
+                                            <p class="cyber-eyebrow mb-2">Program Outcome Scores</p>
+                                            <div class="neon-table table-responsive">
+                                                <table>
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Program Outcome</th>
+                                                            <th class="text-end">Score</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% for po in program_outcomes %}
+                                                            {% with po_value=student_data.po_scores|get_item:po.code %}
+                                                            <tr>
+                                                                <td><strong>{{ po.description }}</strong></td>
+                                                                <td class="text-end">
+                                                                    <span class="badge fw-semibold" style="background: var(--navy); color: var(--accent); border: 2px solid var(--accent);">
+                                                                        {{ po_value|default:0 }}%
+                                                                    </span>
+                                                                </td>
+                                                            </tr>
+                                                            {% endwith %}
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="alert alert-info mb-0">
+                                No students found in the system.
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Courses Section -->
+            <div class="accordion-item mb-2" style="background: var(--white); border: 2px solid var(--border);">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#coursesSection" aria-expanded="false" style="background: var(--bg-surface); color: var(--text-primary);">
+                        <div class="w-100 d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>All Courses</strong>
+                                <div style="color: var(--text-muted); font-size: 0.875rem;">View all courses and their enrollment details</div>
+                            </div>
+                            <span class="badge ms-2" style="background: var(--accent); color: var(--white); border: none;">{{ courses_list|length }} courses</span>
+                        </div>
+                    </button>
+                </h2>
+                <div id="coursesSection" class="accordion-collapse collapse" data-bs-parent="#managementAccordion">
+                    <div class="accordion-body" style="background: var(--white);">
+                        {% if courses_list %}
+                            <div class="neon-table table-responsive">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Course Code</th>
+                                            <th>Course Name</th>
+                                            <th>Instructor</th>
+                                            <th class="text-end">Students</th>
+                                            <th class="text-end">Total Grades</th>
+                                            <th class="text-end">Avg Grade</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for course_data in courses_list %}
+                                        <tr>
+                                            <td><strong>{{ course_data.course.code }}</strong></td>
+                                            <td>{{ course_data.course.name }}</td>
+                                            <td>
+                                                {% if course_data.course.instructor %}
+                                                    {% if course_data.course.instructor.first_name or course_data.course.instructor.last_name %}
+                                                        {{ course_data.course.instructor.first_name }} {{ course_data.course.instructor.last_name }}
+                                                    {% else %}
+                                                        {{ course_data.course.instructor.username }}
+                                                    {% endif %}
+                                                {% else %}
+                                                    <span style="color: var(--text-muted);">—</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-end">{{ course_data.students_count }}</td>
+                                            <td class="text-end">{{ course_data.total_grades }}</td>
+                                            <td class="text-end">
+                                                <span class="badge fw-semibold" style="background: var(--navy); color: var(--accent); border: 2px solid var(--accent);">
+                                                    {{ course_data.average_grade }}%
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-info mb-0">
+                                No courses found in the system.
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
