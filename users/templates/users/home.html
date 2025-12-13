@@ -3,64 +3,97 @@
 {% block title %}Home - Academic Outcome Tracker{% endblock %}
 
 {% block content %}
-<div class="cyber-hero mb-4">
-    <p class="cyber-eyebrow mb-2">Academic Outcome Tracker</p>
-    <h2 class="mb-3">Illuminate learning, align programs, inspire success.</h2>
-    <p class="metric-subtext mb-0">
-        Real-time dashboards convert raw learning outcomes into clear Program Outcome intelligence for students,
-        instructors, and department heads.
-    </p>
+<div class="d-flex justify-content-center align-items-center" style="min-height: 70vh;">
+    <div class="entry-selection-panel">
+        <div class="entry-panel-header">
+            Associate / Bachelor / Institute
+        </div>
+        <div class="entry-panel-body">
+            {% if user.is_authenticated %}
+                {% if user.role == 'student' %}
+                    <a href="{% url 'student:dashboard' %}" class="entry-option">
+                        <span>Student Entry</span>
+                    </a>
+                {% elif user.role == 'instructor' %}
+                    <a href="{% url 'instructor:dashboard' %}" class="entry-option">
+                        <span>Teaching Staff Entry</span>
+                    </a>
+                {% elif user.role == 'department_head' %}
+                    <a href="{% url 'head:dashboard' %}" class="entry-option">
+                        <span>Administrative Staff Entry</span>
+                    </a>
+                {% elif user.is_superuser %}
+                    <a href="{% url 'admin_page' %}" class="entry-option">
+                        <span>Administrative Staff Entry</span>
+                    </a>
+                {% else %}
+                    <a href="{% url 'login' %}" class="entry-option">
+                        <span>Student Entry</span>
+                    </a>
+                    <a href="{% url 'login' %}" class="entry-option">
+                        <span>Teaching Staff Entry</span>
+                    </a>
+                    <a href="{% url 'login' %}" class="entry-option">
+                        <span>Administrative Staff Entry</span>
+                    </a>
+                {% endif %}
+            {% else %}
+                <a href="{% url 'login' %}" class="entry-option">
+                    <span>Student Entry</span>
+                </a>
+                <a href="{% url 'login' %}" class="entry-option">
+                    <span>Teaching Staff Entry</span>
+                </a>
+                <a href="{% url 'login' %}" class="entry-option">
+                    <span>Administrative Staff Entry</span>
+                </a>
+            {% endif %}
+        </div>
+    </div>
 </div>
 
-<div class="row g-4">
-    <div class="col-md-6">
-        <div class="cyber-panel h-100">
-            <div class="cyber-panel-header">
-                <h4 class="mb-0">Why it matters</h4>
-            </div>
-            <div class="cyber-panel-body">
-                <ul class="list-unstyled mb-0">
-                    <li class="mb-3">
-                        <strong>Students</strong> translate course grades into PO mastery and know exactly where to focus.
-                    </li>
-                    <li class="mb-3">
-                        <strong>Instructors</strong> see how each course fuels accreditation targets and can react instantly.
-                    </li>
-                    <li>
-                        <strong>Department heads</strong> receive boardroom-ready insights with course-level drill downs.
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6">
-        <div class="cyber-panel h-100">
-            <div class="cyber-panel-header">
-                <h4 class="mb-0">Get started</h4>
-            </div>
-            <div class="cyber-panel-body">
-                {% if not user.is_authenticated %}
-                    <p style="color: var(--text-muted);">
-                        Sign in to access your personalized console and monitor Program Outcome progress.
-                    </p>
-                    <a href="{% url 'login' %}" class="glow-button">Login</a>
-                {% else %}
-                    <p style="color: var(--text-muted);" class="mb-2">
-                        You are logged in as <strong>{% if user.first_name or user.last_name %}{{ user.first_name }} {{ user.last_name }}{% else %}{{ user.username }}{% endif %}</strong> ({{ user.get_role_display }}){% if user.email %} · {{ user.email }}{% endif %}.
-                    </p>
-                    <p style="color: var(--text-muted);" class="mb-3">Choose your dashboard from the navigation menu to continue.</p>
-                    <div class="d-flex flex-wrap gap-2">
-                        {% if user.role == 'student' %}
-                            <a href="{% url 'student:dashboard' %}" class="glow-button">Go to Dashboard</a>
-                        {% elif user.role == 'instructor' %}
-                            <a href="{% url 'instructor:dashboard' %}" class="glow-button">Go to Dashboard</a>
-                        {% elif user.role == 'department_head' %}
-                            <a href="{% url 'head:dashboard' %}" class="glow-button">Go to Dashboard</a>
-                        {% endif %}
-                    </div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-</div>
+<style>
+    .entry-selection-panel {
+        width: 100%;
+        max-width: 500px;
+        background: var(--white);
+        border: 2px solid var(--border);
+        border-radius: 20px;
+        box-shadow: var(--shadow);
+        overflow: hidden;
+    }
+    .entry-panel-header {
+        background: #348AC7;
+        color: var(--white);
+        padding: 1.25rem 1.5rem;
+        font-weight: 600;
+        font-size: 1.1rem;
+        text-align: center;
+    }
+    .entry-panel-body {
+        padding: 0;
+    }
+    .entry-option {
+        display: block;
+        padding: 1.25rem 1.5rem;
+        color: var(--text-primary);
+        text-decoration: none;
+        border-bottom: 1px solid var(--border);
+        transition: all 0.2s ease;
+        background: var(--white);
+    }
+    .entry-option:last-child {
+        border-bottom: none;
+    }
+    .entry-option:hover {
+        background: rgba(255, 107, 53, 0.1);
+        color: var(--accent);
+        transform: translateX(5px);
+    }
+    .entry-option span {
+        display: block;
+        font-size: 1rem;
+        font-weight: 500;
+    }
+</style>
 {% endblock %}
