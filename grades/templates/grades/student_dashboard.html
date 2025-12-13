@@ -27,37 +27,53 @@
                 <h4 class="mb-0">Learning Outcome Stream</h4>
                 <span class="cyber-chip">Live feed</span>
             </div>
-            <div class="cyber-panel-body neon-table">
-                {% if grades %}
-                    <div class="table-responsive">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Course</th>
-                                    <th>Learning Outcome</th>
-                                    <th class="text-end">Grade</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for grade in grades %}
-                                <tr>
-                                    <td>
-                                        <strong>{{ grade.course.code }}</strong>
-                                        <div style="color: var(--text-muted);">{{ grade.course.name }}</div>
-                                    </td>
-                                    <td>
-                                        <div style="color: var(--text-muted); text-transform: uppercase; font-size: 0.875rem;">Learning Outcome</div>
-                                        <div>{{ grade.learning_outcome.description }}</div>
-                                    </td>
-                                    <td class="text-end">
-                                        <span class="badge fw-semibold" style="background: var(--navy); color: var(--accent); border: 2px solid var(--accent);">
-                                            {{ grade.score }}%
-                                        </span>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+            <div class="cyber-panel-body">
+                {% if courses_with_grades %}
+                    <div class="accordion" id="learningOutcomesAccordion">
+                        {% for course, course_grades in courses_with_grades %}
+                            <div class="accordion-item mb-2" style="background: var(--white); border: 2px solid var(--border);">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#courseGrades{{ course.id }}" aria-expanded="false" style="background: var(--bg-surface); color: var(--text-primary);">
+                                        <div class="w-100 d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <strong>{{ course.code }} · {{ course.name }}</strong>
+                                                <div style="color: var(--text-muted); font-size: 0.875rem;">Click to view learning outcomes and grades</div>
+                                            </div>
+                                            <span class="badge ms-2" style="background: var(--accent); color: var(--white); border: none;">{{ course_grades|length }} outcomes</span>
+                                        </div>
+                                    </button>
+                                </h2>
+                                <div id="courseGrades{{ course.id }}" class="accordion-collapse collapse" data-bs-parent="#learningOutcomesAccordion">
+                                    <div class="accordion-body" style="background: var(--white);">
+                                        <div class="neon-table table-responsive">
+                                            <table>
+                                                <thead>
+                                                    <tr>
+                                                        <th>Learning Outcome</th>
+                                                        <th class="text-end">Grade</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for grade in course_grades %}
+                                                    <tr>
+                                                        <td>
+                                                            <div style="color: var(--text-muted); text-transform: uppercase; font-size: 0.875rem;">Learning Outcome</div>
+                                                            <div>{{ grade.learning_outcome.description }}</div>
+                                                        </td>
+                                                        <td class="text-end">
+                                                            <span class="badge fw-semibold" style="background: var(--navy); color: var(--accent); border: 2px solid var(--accent);">
+                                                                {{ grade.score }}%
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
                     </div>
                 {% else %}
                     <div class="alert alert-info mb-0">

@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
+from collections import defaultdict
 from .models import Grade
 from outcomes.utils import (
     calculate_po_scores,
@@ -20,6 +21,14 @@ def student_dashboard(request):
         student=request.user
     ).select_related('course', 'learning_outcome').order_by('course__code', 'learning_outcome__code')
     
+    # Group grades by course
+    grades_by_course = defaultdict(list)
+    for grade in grades:
+        grades_by_course[grade.course].append(grade)
+    
+    # Convert to list of tuples (course, grades_list) for template
+    courses_with_grades = [(course, grades_list) for course, grades_list in sorted(grades_by_course.items(), key=lambda x: x[0].code)]
+    
     # Calculate PO scores for this student
     po_scores = calculate_po_scores(request.user)
     course_po_scores = calculate_course_po_scores(request.user)
@@ -34,6 +43,7 @@ def student_dashboard(request):
     return render(request, 'grades/student_dashboard.html', {
         'user': request.user,
         'grades': grades,
+        'courses_with_grades': courses_with_grades,
         'po_scores': po_scores,
         'program_outcomes': program_outcomes,
         'course_po_scores': course_po_scores,
