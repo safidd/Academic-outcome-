@@ -179,7 +179,7 @@ def calculate_department_course_po_scores():
     """
     grades = (
         Grade.objects.all()
-        .select_related('course', 'student', 'learning_outcome__course')
+        .select_related('course', 'course__instructor', 'student', 'learning_outcome__course')
         .prefetch_related('learning_outcome__contribution_rates__program_outcome')
     )
     return _aggregate_course_po_scores(grades)

@@ -1,0 +1,171 @@
+{% extends 'users/base.html' %}
+
+{% block title %}Admin - User Management{% endblock %}
+
+{% block content %}
+<div class="cyber-hero mb-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between gap-3 align-items-start">
+        <div>
+            <p class="cyber-eyebrow mb-2">Administrator Interface</p>
+            <h2 class="mb-2">User Management Console</h2>
+            <p class="metric-subtext mb-0">
+                View all users in the system categorized by role. Passwords are stored securely as hashes.
+            </p>
+        </div>
+        <div class="d-flex flex-wrap gap-3">
+            <span class="cyber-chip">Students: {{ total_students }}</span>
+            <span class="cyber-chip">Instructors: {{ total_instructors }}</span>
+            <span class="cyber-chip">Department Heads: {{ total_heads }}</span>
+        </div>
+    </div>
+</div>
+
+<div class="alert alert-info mb-4" style="border-color: var(--accent); background: rgba(255, 107, 53, 0.1);">
+    <strong>Note:</strong> Passwords are stored securely as hashes in Django. The passwords shown below are likely default/test passwords based on common patterns. For security, users should change their passwords after first login.
+</div>
+
+<!-- Students Section -->
+<div class="cyber-panel mb-4">
+    <div class="cyber-panel-header d-flex justify-content-between align-items-center">
+        <h4 class="mb-0">Students</h4>
+        <span class="cyber-chip">{{ total_students }} total</span>
+    </div>
+    <div class="cyber-panel-body neon-table">
+        {% if students %}
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Full Name</th>
+                            <th>Email</th>
+                            <th>Password (Likely Default)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in students %}
+                        <tr>
+                            <td><strong>{{ entry.user.username }}</strong></td>
+                            <td>
+                                {% if entry.user.first_name or entry.user.last_name %}
+                                    {{ entry.user.first_name }} {{ entry.user.last_name }}
+                                {% else %}
+                                    <span style="color: var(--text-muted);">—</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ entry.user.email|default:"—" }}</td>
+                            <td>
+                                <code style="background: var(--bg-surface); padding: 0.25rem 0.5rem; border-radius: 4px; color: var(--accent);">
+                                    {{ entry.password_hint }}
+                                </code>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="alert alert-info mb-0">
+                No students found in the system.
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Instructors Section -->
+<div class="cyber-panel mb-4">
+    <div class="cyber-panel-header d-flex justify-content-between align-items-center">
+        <h4 class="mb-0">Instructors</h4>
+        <span class="cyber-chip">{{ total_instructors }} total</span>
+    </div>
+    <div class="cyber-panel-body neon-table">
+        {% if instructors %}
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Full Name</th>
+                            <th>Email</th>
+                            <th>Password (Likely Default)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in instructors %}
+                        <tr>
+                            <td><strong>{{ entry.user.username }}</strong></td>
+                            <td>
+                                {% if entry.user.first_name or entry.user.last_name %}
+                                    {{ entry.user.first_name }} {{ entry.user.last_name }}
+                                {% else %}
+                                    <span style="color: var(--text-muted);">—</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ entry.user.email|default:"—" }}</td>
+                            <td>
+                                <code style="background: var(--bg-surface); padding: 0.25rem 0.5rem; border-radius: 4px; color: var(--accent);">
+                                    {{ entry.password_hint }}
+                                </code>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="alert alert-info mb-0">
+                No instructors found in the system.
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Department Heads Section -->
+<div class="cyber-panel mb-4">
+    <div class="cyber-panel-header d-flex justify-content-between align-items-center">
+        <h4 class="mb-0">Department Heads</h4>
+        <span class="cyber-chip">{{ total_heads }} total</span>
+    </div>
+    <div class="cyber-panel-body neon-table">
+        {% if department_heads %}
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Full Name</th>
+                            <th>Email</th>
+                            <th>Password (Likely Default)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in department_heads %}
+                        <tr>
+                            <td><strong>{{ entry.user.username }}</strong></td>
+                            <td>
+                                {% if entry.user.first_name or entry.user.last_name %}
+                                    {{ entry.user.first_name }} {{ entry.user.last_name }}
+                                {% else %}
+                                    <span style="color: var(--text-muted);">—</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ entry.user.email|default:"—" }}</td>
+                            <td>
+                                <code style="background: var(--bg-surface); padding: 0.25rem 0.5rem; border-radius: 4px; color: var(--accent);">
+                                    {{ entry.password_hint }}
+                                </code>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="alert alert-info mb-0">
+                No department heads found in the system.
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

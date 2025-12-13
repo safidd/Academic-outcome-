@@ -15,12 +15,12 @@
         </div>
         <div class="d-flex flex-wrap gap-3">
             <span class="cyber-chip">Courses: {{ courses|length }}</span>
-            <span class="cyber-chip">Recent grades: {{ recent_grades|length }}</span>
+            <span class="cyber-chip">Total grades: {{ total_grades }}</span>
         </div>
     </div>
 </div>
 
-<div class="row g-4">
+<div class="row g-4 mb-4">
     <div class="col-lg-5">
         <div class="cyber-panel">
             <div class="cyber-panel-header">
@@ -50,9 +50,8 @@
                                                 <ul class="list-unstyled mb-0">
                                                     {% for po in dist %}
                                                         <li class="mb-3 pb-2 border-bottom border-opacity-25">
-                                                            <strong style="color: var(--accent);">{{ po.program_outcome.code }}</strong>
-                                                            <div style="color: var(--text-muted); font-size: 0.875rem;" class="mb-2">{{ po.program_outcome.description }}</div>
-                                                            <div class="small" style="color: var(--text-muted);">Contributions from Learning Outcomes:</div>
+                                                            <strong style="color: var(--accent);">{{ po.program_outcome.description }}</strong>
+                                                            <div class="small mt-2" style="color: var(--text-muted);">Contributions from Learning Outcomes:</div>
                                                             <ul class="mt-1 ms-3 mb-0 small" style="color: var(--text-muted);">
                                                                 {% for lo in po.learning_outcomes %}
                                                                     <li>{{ lo.description|truncatewords:10 }} — <span style="color: var(--accent); font-weight: 600;">{{ lo.percentage }}%</span></li>
@@ -92,38 +91,38 @@
     <div class="col-lg-7">
         <div class="cyber-panel h-100">
             <div class="cyber-panel-header d-flex justify-content-between align-items-center">
-                <h4 class="mb-0">Recent Grades Entered</h4>
-                <span class="cyber-chip">Auto-sync</span>
+                <h4 class="mb-0">Course Averages</h4>
+                <span class="cyber-chip">Performance overview</span>
             </div>
             <div class="cyber-panel-body neon-table">
-                {% if recent_grades %}
+                {% if course_averages %}
                     <div class="table-responsive">
                         <table>
                             <thead>
                                 <tr>
-                                    <th>Student</th>
                                     <th>Course</th>
-                                    <th>Learning Outcome</th>
-                                    <th class="text-end">Score</th>
+                                    <th>Average Score</th>
+                                    <th class="text-end">Students</th>
+                                    <th class="text-end">Grades</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for grade in recent_grades %}
+                                {% for entry in course_averages %}
                                 <tr>
                                     <td>
-                                        <strong>{% if grade.student.first_name or grade.student.last_name %}{{ grade.student.first_name }} {{ grade.student.last_name }}{% else %}{{ grade.student.username }}{% endif %}</strong>
-                                        <div style="color: var(--text-muted);">{{ grade.student.email|default:grade.student.username }}</div>
+                                        <strong>{{ entry.course.code }}</strong>
+                                        <div style="color: var(--text-muted);">{{ entry.course.name }}</div>
                                     </td>
                                     <td>
-                                        <strong>{{ grade.course.code }}</strong>
-                                        <div style="color: var(--text-muted);">{{ grade.course.name }}</div>
+                                        <span class="badge fw-semibold" style="background: var(--navy); color: var(--accent); border: 2px solid var(--accent); font-size: 1rem; padding: 0.5rem 1rem;">
+                                            {{ entry.average }}%
+                                        </span>
                                     </td>
-                                    <td>
-                                        <div style="color: var(--text-muted); text-transform: uppercase; font-size: 0.875rem;">Learning Outcome</div>
-                                        <div>{{ grade.learning_outcome.description }}</div>
+                                    <td class="text-end" style="color: var(--text-muted);">
+                                        {{ entry.student_count }}
                                     </td>
-                                    <td class="text-end">
-                                        <span class="badge" style="background: var(--navy); color: var(--accent); border: 2px solid var(--accent);">{{ grade.score }}%</span>
+                                    <td class="text-end" style="color: var(--text-muted);">
+                                        {{ entry.grade_count }}
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -141,14 +140,14 @@
 </div>
 
 {% if course_po_summaries %}
-<div class="cyber-panel">
+<div class="cyber-panel mt-4">
     <div class="cyber-panel-header d-flex justify-content-between align-items-center">
         <h4 class="mb-0">Course Program Outcome Health</h4>
         <span class="cyber-chip">Instructor view</span>
     </div>
     <div class="cyber-panel-body">
         {% for entry in course_po_summaries %}
-            <div class="mb-4">
+            <div class="mb-4 pb-3 {% if not forloop.last %}border-bottom{% endif %}">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <div>
                         <h5 class="mb-1">{{ entry.course.code }} · {{ entry.course.name }}</h5>
@@ -167,12 +166,16 @@
                             </thead>
                             <tbody>
                                 {% for code, value in entry.po_scores.items %}
-                                <tr>
-                                    <td><strong>{{ code }}</strong></td>
-                                    <td class="text-end">
-                                        <span class="badge fw-semibold" style="background: var(--navy); color: var(--accent); border: 2px solid var(--accent);">{{ value }}%</span>
-                                    </td>
-                                </tr>
+                                    {% for po in program_outcomes %}
+                                        {% if po.code == code %}
+                                        <tr>
+                                            <td><strong>{{ po.description }}</strong></td>
+                                            <td class="text-end">
+                                                <span class="badge fw-semibold" style="background: var(--navy); color: var(--accent); border: 2px solid var(--accent);">{{ value }}%</span>
+                                            </td>
+                                        </tr>
+                                        {% endif %}
+                                    {% endfor %}
                                 {% endfor %}
                             </tbody>
                         </table>
@@ -192,8 +195,7 @@
                                         {% for dist in entry.po_distribution %}
                                         <tr>
                                             <td>
-                                                <strong>{{ dist.program_outcome.code }}</strong>
-                                                <div style="color: var(--text-muted);">{{ dist.program_outcome.description }}</div>
+                                                <strong>{{ dist.program_outcome.description }}</strong>
                                             </td>
                                             <td>
                                                 <ul class="mb-0 small" style="color: var(--text-muted);">

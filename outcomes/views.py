@@ -71,16 +71,20 @@ def head_dashboard(request):
     
     insights = []
     if top_po:
+        desc = top_po["description"]
+        title = desc[:50] + "..." if len(desc) > 50 else desc
         insights.append({
-            'title': f'{top_po["code"]} leading the cohort',
-            'detail': f'{top_po["code"]} averages {top_po["value"]}%, indicating strong mastery.',
+            'title': f'Leading outcome: {title}',
+            'detail': f'This outcome averages {top_po["value"]}%, indicating strong mastery.',
             'badge': 'Success pattern',
             'trend': '+4.2%',
         })
     if low_po:
+        desc = low_po["description"]
+        title = desc[:50] + "..." if len(desc) > 50 else desc
         insights.append({
-            'title': f'{low_po["code"]} requires focus',
-            'detail': f'{low_po["code"]} averages {low_po["value"]}%. Consider targeted remediation.',
+            'title': f'Requires focus: {title}',
+            'detail': f'This outcome averages {low_po["value"]}%. Consider targeted remediation.',
             'badge': 'Action needed',
             'trend': '-3.1%',
         })
