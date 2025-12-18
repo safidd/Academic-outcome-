@@ -186,85 +186,95 @@
         <span class="cyber-chip">Department view</span>
     </div>
     <div class="cyber-panel-body">
-        {% for entry in course_po_breakdown %}
-            <div class="mb-4 pb-3 {% if not forloop.last %}border-bottom{% endif %}">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <div>
-                        <h5 class="mb-1">{{ entry.course.code }} · {{ entry.course.name }}</h5>
-                        <p style="color: var(--text-muted);" class="mb-0">
-                            Average PO contribution across all students
-                            {% if entry.course.instructor %}
-                                · Instructor: <strong>{% if entry.course.instructor.first_name or entry.course.instructor.last_name %}{{ entry.course.instructor.first_name }} {{ entry.course.instructor.last_name }}{% else %}{{ entry.course.instructor.username }}{% endif %}</strong>
-                            {% endif %}
-                        </p>
-                    </div>
-                    <span class="cyber-chip">{{ entry.po_scores|length }} outcomes</span>
-                </div>
-                {% if entry.po_scores %}
-                    <div class="neon-table table-responsive">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Program Outcome</th>
-                                    <th class="text-end">Average</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for code, value in entry.po_scores.items %}
-                                    {% for po in program_outcomes %}
-                                        {% if po.code == code %}
-                                        <tr>
-                                            <td><strong>{{ po.description }}</strong></td>
-                                            <td class="text-end">
-                                                <span class="badge fw-semibold" style="background: var(--navy); color: var(--accent); border: 2px solid var(--accent);">{{ value }}%</span>
-                                            </td>
-                                        </tr>
+        <div class="accordion" id="courseDetailAccordion">
+            {% for entry in course_po_breakdown %}
+                <div class="accordion-item mb-2" style="background: var(--white); border: 2px solid var(--border);">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#courseDetail{{ entry.course.id }}" aria-expanded="false" style="background: var(--bg-surface); color: var(--text-primary);">
+                            <div class="w-100 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>{{ entry.course.code }} · {{ entry.course.name }}</strong>
+                                    <div style="color: var(--text-muted); font-size: 0.875rem;">
+                                        Average PO contribution across all students
+                                        {% if entry.course.instructor %}
+                                            · Instructor: <strong>{% if entry.course.instructor.first_name or entry.course.instructor.last_name %}{{ entry.course.instructor.first_name }} {{ entry.course.instructor.last_name }}{% else %}{{ entry.course.instructor.username }}{% endif %}</strong>
                                         {% endif %}
-                                    {% endfor %}
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="mt-3">
-                        <p class="cyber-eyebrow mb-2">Program Outcome calculation</p>
-                        {% if entry.po_distribution %}
-                            <div class="neon-table table-responsive">
-                                <table>
-                                    <thead>
-                                        <tr>
-                                            <th>Program Outcome</th>
-                                            <th>Learning Outcome Distribution</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for dist in entry.po_distribution %}
-                                        <tr>
-                                            <td>
-                                                <strong>{{ dist.program_outcome.description }}</strong>
-                                            </td>
-                                            <td>
-                                                <ul class="mb-0 small" style="color: var(--text-muted);">
-                                                    {% for lo in dist.learning_outcomes %}
-                                                        <li>{{ lo.description }} — {{ lo.percentage }}%</li>
-                                                    {% endfor %}
-                                                </ul>
-                                            </td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
+                                    </div>
+                                </div>
+                                <span class="badge ms-2" style="background: var(--accent); color: var(--white); border: none;">{{ entry.po_scores|length }} outcomes</span>
                             </div>
-                        {% else %}
-                            <p style="color: var(--text-muted);" class="mb-0">No Program Outcome mappings defined for this course.</p>
-                        {% endif %}
+                        </button>
+                    </h2>
+                    <div id="courseDetail{{ entry.course.id }}" class="accordion-collapse collapse" data-bs-parent="#courseDetailAccordion">
+                        <div class="accordion-body" style="background: var(--white);">
+                            {% if entry.po_scores %}
+                                <div class="neon-table table-responsive mb-3">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Program Outcome</th>
+                                                <th class="text-end">Average</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for code, value in entry.po_scores.items %}
+                                                {% for po in program_outcomes %}
+                                                    {% if po.code == code %}
+                                                    <tr>
+                                                        <td><strong>{{ po.description }}</strong></td>
+                                                        <td class="text-end">
+                                                            <span class="badge fw-semibold" style="background: var(--navy); color: var(--accent); border: 2px solid var(--accent);">{{ value }}%</span>
+                                                        </td>
+                                                    </tr>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="mt-3">
+                                    <p class="cyber-eyebrow mb-2">Program Outcome calculation</p>
+                                    {% if entry.po_distribution %}
+                                        <div class="neon-table table-responsive">
+                                            <table>
+                                                <thead>
+                                                    <tr>
+                                                        <th>Program Outcome</th>
+                                                        <th>Learning Outcome Distribution</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for dist in entry.po_distribution %}
+                                                    <tr>
+                                                        <td>
+                                                            <strong>{{ dist.program_outcome.description }}</strong>
+                                                        </td>
+                                                        <td>
+                                                            <ul class="mb-0 small" style="color: var(--text-muted);">
+                                                                {% for lo in dist.learning_outcomes %}
+                                                                    <li>{{ lo.description }} — {{ lo.percentage }}%</li>
+                                                                {% endfor %}
+                                                            </ul>
+                                                        </td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    {% else %}
+                                        <p style="color: var(--text-muted);" class="mb-0">No Program Outcome mappings defined for this course.</p>
+                                    {% endif %}
+                                </div>
+                            {% else %}
+                                <div class="alert alert-info mb-0">
+                                    No PO coverage recorded for this course yet.
+                                </div>
+                            {% endif %}
+                        </div>
                     </div>
-                {% else %}
-                    <div class="alert alert-info mb-0">
-                        No PO coverage recorded for this course yet.
-                    </div>
-                {% endif %}
-            </div>
-        {% endfor %}
+                </div>
+            {% endfor %}
+        </div>
     </div>
 </div>
 {% endif %}
