@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-$=-m57peq)n+my32-es6qb1q+709$y1m*^d(*1&w*u7wl^)(ov
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
 
 
 # Application definition
@@ -135,3 +135,17 @@ LOGIN_REDIRECT_URL = '/'
 
 # Custom 403 handler
 handler403 = 'users.views.permission_denied_view'
+
+# CSRF Settings - Use sessions instead of cookies for Safari compatibility
+CSRF_COOKIE_SECURE = False  # Set to True in production with HTTPS
+CSRF_COOKIE_HTTPONLY = False
+CSRF_USE_SESSIONS = True  # Store CSRF token in session instead of cookie (works when Safari blocks cookies)
+CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1:8000', 'http://localhost:8000']
+
+# Session Settings - Must work for CSRF_USE_SESSIONS to function
+SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_AGE = 86400  # 24 hours
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # Ensure using database sessions

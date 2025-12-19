@@ -5,6 +5,8 @@ from django.http import HttpResponseForbidden
 from django.contrib import messages
 from django.http import JsonResponse
 from django.db import models
+from django.utils import timezone
+from datetime import date
 from grades.forms import GradeEntryForm
 from grades.models import Grade
 from outcomes.models import LearningOutcome
@@ -13,7 +15,8 @@ from outcomes.utils import (
     build_course_po_distributions,
 )
 from outcomes.models import ProgramOutcome
-from courses.models import Course
+from courses.models import Course, Attendance
+from courses.forms import AttendanceForm
 
 
 @login_required
@@ -129,4 +132,70 @@ def get_learning_outcomes(request, course_id):
     
     return JsonResponse({
         'learning_outcomes': list(learning_outcomes)
+    })
+
+
+@login_required
+def take_attendance(request, course_id):
+    """Instructor view to take attendance for a course"""
+    if request.user.role != 'instructor':
+        raise PermissionDenied("Only instructors can access this page.")
+    
+    # Verify the course belongs to this instructor
+    course = get_object_or_404(Course, pk=course_id, instructor=request.user)
+    
+    # Get enrolled students (students with grades in this course)
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    enrolled_students = User.objects.filter(
+        role='student',
+        grades__course=course
+    ).distinct().order_by('first_name', 'last_name', 'username')
+    
+    if request.method == 'POST':
+        form = AttendanceForm(request.POST, instructor=request.user, course=course)
+        if form.is_valid():
+            attendance_date = form.cleaned_data['date']
+            created_count, updated_count = form.save(course, attendance_date)
+            
+            if created_count > 0 or updated_count > 0:
+                messages.success(
+                    request,
+                    f'Attendance recorded successfully! '
+                    f'{created_count} new records created, {updated_count} records updated.'
+                )
+            else:
+                messages.warning(request, 'No attendance records were saved.')
+            
+            return redirect('instructor:take_attendance', course_id=course.id)
+    else:
+        # Pre-fill with today's date
+        form = AttendanceForm(
+            initial={'date': date.today()},
+            instructor=request.user,
+            course=course
+        )
+    
+    # Get existing attendance for the selected date (if any) to pre-populate form
+    if request.method == 'POST' and form.is_valid():
+        selected_date = form.cleaned_data.get('date')
+    else:
+        selected_date = form.initial.get('date', date.today())
+    
+    existing_attendance = {}
+    if enrolled_students.exists() and selected_date:
+        date_attendance = Attendance.objects.filter(
+            course=course,
+            date=selected_date
+        ).select_related('student')
+        
+        for att in date_attendance:
+            existing_attendance[att.student.id] = att.status
+    
+    return render(request, 'courses/take_attendance.html', {
+        'course': course,
+        'form': form,
+        'enrolled_students': enrolled_students,
+        'existing_attendance': existing_attendance,
+        'user': request.user,
     })

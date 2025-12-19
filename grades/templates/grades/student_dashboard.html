@@ -16,6 +16,7 @@
         <div class="d-flex flex-wrap gap-3">
             <span class="cyber-chip">Courses monitored: {{ grades|length }}</span>
             <span class="cyber-chip">Program outcomes: {{ program_outcomes|length }}</span>
+            <a href="{% url 'student:attendance' %}" class="btn btn-primary btn-sm">View My Attendance</a>
         </div>
     </div>
 </div>

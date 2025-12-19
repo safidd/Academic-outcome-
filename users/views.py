@@ -24,6 +24,12 @@ class CustomLoginView(LoginView):
         elif user.role == 'department_head':
             return reverse('head:dashboard')
         return reverse('home')
+    
+    def get_context_data(self, **kwargs):
+        """Add next parameter to context"""
+        context = super().get_context_data(**kwargs)
+        context['next'] = self.request.GET.get('next', '')
+        return context
 
 
 def home(request):
