@@ -551,9 +551,114 @@
         </div>
     </div>
 </div>
+
+<!-- Attendance Dashboard Section -->
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        <div class="cyber-panel">
+            <div class="cyber-panel-header d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">Course Attendance Leaderboard</h4>
+                <span class="cyber-chip">Department Overview</span>
+            </div>
+            <div class="cyber-panel-body">
+                <!-- Search/Filter Bar -->
+                <div class="mb-4">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <input type="text" 
+                                   id="courseSearch" 
+                                   class="form-control" 
+                                   placeholder="Search by course name or code..."
+                                   onkeyup="filterCourses()">
+                        </div>
+                        <div class="col-md-6">
+                            <input type="text" 
+                                   id="professorSearch" 
+                                   class="form-control" 
+                                   placeholder="Search by professor name..."
+                                   onkeyup="filterCourses()">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Leaderboard Table -->
+                <div class="table-responsive mb-4">
+                    <table class="neon-table" id="attendanceTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 5%;">Rank</th>
+                                <th style="width: 25%;">Course Name</th>
+                                <th style="width: 20%;">Assigned Professor</th>
+                                <th style="width: 15%;" class="text-center">Attendance %</th>
+                                <th style="width: 15%;" class="text-center">Students Enrolled</th>
+                                <th style="width: 20%;" class="text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for data in course_attendance_data %}
+                                <tr class="course-row" 
+                                    data-course="{{ data.course.code|lower }} {{ data.course.name|lower }}"
+                                    data-professor="{{ data.instructor_name|lower }}">
+                                    <td>
+                                        <span class="badge" style="background: var(--accent); color: var(--white);">
+                                            #{{ forloop.counter }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <strong>{{ data.course.code }}</strong>
+                                        <div style="color: var(--text-muted); font-size: 0.875rem;">{{ data.course.name }}</div>
+                                    </td>
+                                    <td>{{ data.instructor_name }}</td>
+                                    <td class="text-center">
+                                        <span class="badge fw-semibold" 
+                                              style="background: {% if data.attendance_percentage >= 85 %}#28a745{% elif data.attendance_percentage >= 70 %}#ffc107{% else %}#dc3545{% endif %}; 
+                                                     color: {% if data.attendance_percentage >= 70 %}white{% else %}white{% endif %};">
+                                            {{ data.attendance_percentage }}%
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <strong>{{ data.total_students_enrolled }}</strong>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if data.attendance_percentage >= 85 %}
+                                            <span class="badge" style="background: #28a745; color: white;">✓ Excellent</span>
+                                        {% elif data.attendance_percentage >= 70 %}
+                                            <span class="badge" style="background: #ffc107; color: #000;">⚠ Good</span>
+                                        {% else %}
+                                            <span class="badge" style="background: #dc3545; color: white;">✗ Needs Attention</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center">
+                                        <div class="alert alert-info mb-0">
+                                            No attendance data available yet. Instructors need to start recording attendance.
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Bar Chart Visualization -->
+                {% if course_attendance_data %}
+                <div class="mt-4 pt-4" style="border-top: 2px solid var(--border);">
+                    <h5 class="mb-3">Attendance Comparison Chart</h5>
+                    <div class="chart-container" style="height: 400px; position: relative;">
+                        <canvas id="attendanceChart"></canvas>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         // Progress bars
@@ -561,6 +666,94 @@
             const value = bar.getAttribute('data-progress') || '0';
             bar.style.width = `${value}%`;
         });
+        
+        // Attendance Chart
+        {% if course_attendance_data %}
+        const ctx = document.getElementById('attendanceChart');
+        if (ctx) {
+            const courseData = [
+                {% for data in course_attendance_data %}
+                {
+                    label: '{{ data.course.code }}',
+                    percentage: {{ data.attendance_percentage }},
+                    color: {% if data.attendance_percentage >= 85 %}'#28a745'{% elif data.attendance_percentage >= 70 %}'#ffc107'{% else %}'#dc3545'{% endif %}
+                }{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ];
+            
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: courseData.map(d => d.label),
+                    datasets: [{
+                        label: 'Attendance Percentage',
+                        data: courseData.map(d => d.percentage),
+                        backgroundColor: courseData.map(d => d.color),
+                        borderColor: courseData.map(d => d.color),
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return 'Attendance: ' + context.parsed.y + '%';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Attendance Percentage'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Course Code'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        {% endif %}
     });
+    
+    // Filter function for search
+    function filterCourses() {
+        const courseFilter = document.getElementById('courseSearch').value.toLowerCase();
+        const professorFilter = document.getElementById('professorSearch').value.toLowerCase();
+        const rows = document.querySelectorAll('.course-row');
+        
+        rows.forEach(function(row) {
+            const courseText = row.getAttribute('data-course');
+            const professorText = row.getAttribute('data-professor');
+            
+            const courseMatch = courseText.includes(courseFilter);
+            const professorMatch = professorText.includes(professorFilter);
+            
+            if (courseMatch && professorMatch) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
 </script>
 {% endblock %}

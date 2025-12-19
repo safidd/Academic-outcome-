@@ -11,6 +11,7 @@ from .utils import (
     calculate_department_course_po_scores,
     build_course_po_distributions,
     calculate_po_scores,
+    calculate_course_attendance_averages,
 )
 
 
@@ -158,6 +159,9 @@ def head_dashboard(request):
             'average_grade': round(avg_course_grade, 1),
         })
     
+    # Calculate attendance averages for all courses
+    course_attendance_data = calculate_course_attendance_averages()
+    
     return render(request, 'outcomes/head_dashboard.html', {
         'user': request.user,
         'department_averages': department_averages,
@@ -174,4 +178,5 @@ def head_dashboard(request):
         'instructors_list': instructors_list,
         'students_list': students_list,
         'courses_list': courses_list,
+        'course_attendance_data': course_attendance_data,
     })

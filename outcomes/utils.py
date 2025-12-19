@@ -1,7 +1,9 @@
 from collections import defaultdict
 from django.contrib.auth import get_user_model
+from django.db.models import Count, Q
 from .models import ProgramOutcome, ContributionRate
 from grades.models import Grade
+from courses.models import Attendance, Course
 
 
 def calculate_po_scores(student):
@@ -220,4 +222,66 @@ def build_course_po_distributions(course_ids):
         distributions[course_id] = list(po_dict.values())
     
     return distributions
+
+
+def calculate_course_attendance_averages():
+    """
+    Calculate average attendance rate for each course.
+    Formula: Count of 'Present' / Total number of attendance records for that course.
+    
+    Returns:
+    list: [{
+        'course': Course object,
+        'instructor_name': str,
+        'attendance_percentage': float,
+        'total_students_enrolled': int,
+        'total_attendance_records': int,
+        'present_count': int,
+        'absent_count': int,
+        'late_count': int,
+    }, ...]
+    """
+    # Get all courses
+    courses = Course.objects.select_related('instructor').all()
+    
+    course_attendance_data = []
+    
+    for course in courses:
+        # Get all attendance records for this course
+        attendance_records = Attendance.objects.filter(course=course)
+        total_records = attendance_records.count()
+        
+        # Count by status
+        present_count = attendance_records.filter(status='Present').count()
+        absent_count = attendance_records.filter(status='Absent').count()
+        late_count = attendance_records.filter(status='Late').count()
+        
+        # Calculate average: Present / Total
+        if total_records > 0:
+            attendance_percentage = round((present_count / total_records) * 100, 1)
+        else:
+            attendance_percentage = 0.0
+        
+        # Count unique students enrolled (students with grades in this course)
+        from grades.models import Grade
+        students_enrolled = Grade.objects.filter(course=course).values('student').distinct().count()
+        
+        # Get instructor name
+        instructor_name = course.instructor.get_full_name() or course.instructor.username
+        
+        course_attendance_data.append({
+            'course': course,
+            'instructor_name': instructor_name,
+            'attendance_percentage': attendance_percentage,
+            'total_students_enrolled': students_enrolled,
+            'total_attendance_records': total_records,
+            'present_count': present_count,
+            'absent_count': absent_count,
+            'late_count': late_count,
+        })
+    
+    # Sort by attendance percentage (descending)
+    course_attendance_data.sort(key=lambda x: x['attendance_percentage'], reverse=True)
+    
+    return course_attendance_data
 
