@@ -140,6 +140,15 @@
     </div>
 </div>
 
+<!-- Radar Chart Section -->
+{% if radar_data and radar_data.labels %}
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        {% include 'outcomes/radar_chart_component.html' with chart_id='departmentRadarChart' target_type='department' target_id=None %}
+    </div>
+</div>
+{% endif %}
+
 <div class="row g-4 mb-4">
     <div class="col-md-6">
         <div class="cyber-panel h-100">

@@ -11,6 +11,8 @@ from .utils import (
     calculate_department_course_po_scores,
     build_course_po_distributions,
     calculate_po_scores,
+    get_po_radar_data_for_department,
+    get_po_radar_data_for_course,
 )
 
 
@@ -158,6 +160,9 @@ def head_dashboard(request):
             'average_grade': round(avg_course_grade, 1),
         })
     
+    # Get radar chart data for department
+    radar_data = get_po_radar_data_for_department()
+    
     return render(request, 'outcomes/head_dashboard.html', {
         'user': request.user,
         'department_averages': department_averages,
@@ -174,4 +179,48 @@ def head_dashboard(request):
         'instructors_list': instructors_list,
         'students_list': students_list,
         'courses_list': courses_list,
+        'radar_data': radar_data,
     })
+
+
+@login_required
+def get_radar_chart_data(request, target_type, target_id=None):
+    """
+    API endpoint to get radar chart data.
+    
+    Args:
+        target_type: 'department' or 'course'
+        target_id: Course ID (required if target_type is 'course')
+    
+    Returns:
+        JSON response with radar chart data
+    """
+    from django.http import JsonResponse
+    from django.shortcuts import get_object_or_404
+    
+    if request.user.role == 'department_head':
+        # Department head can see department or any course
+        if target_type == 'department':
+            data = get_po_radar_data_for_department()
+            return JsonResponse(data)
+        elif target_type == 'course' and target_id:
+            data = get_po_radar_data_for_course(target_id)
+            if data:
+                return JsonResponse(data)
+            return JsonResponse({'error': 'Course not found'}, status=404)
+    
+    elif request.user.role == 'instructor':
+        # Instructors can only see their own courses
+        if target_type == 'course' and target_id:
+            # Verify the course belongs to this instructor
+            course = get_object_or_404(Course, pk=target_id, instructor=request.user)
+            data = get_po_radar_data_for_course(target_id)
+            if data:
+                return JsonResponse(data)
+            return JsonResponse({'error': 'Course not found'}, status=404)
+        elif target_type == 'department':
+            # Instructors can see department average for comparison
+            data = get_po_radar_data_for_department()
+            return JsonResponse(data)
+    
+    return JsonResponse({'error': 'Unauthorized'}, status=403)

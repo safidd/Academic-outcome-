@@ -139,6 +139,36 @@
     </div>
 </div>
 
+<!-- Radar Chart for Course Comparison -->
+{% if courses %}
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        <div class="cyber-panel">
+            <div class="cyber-panel-header d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">Program Outcome Radar Chart</h4>
+                <span class="cyber-chip">Visual Comparison</span>
+            </div>
+            <div class="cyber-panel-body">
+                <div class="mb-3">
+                    <label for="courseRadarSelect" class="form-label">Select Course to Compare:</label>
+                    <select id="courseRadarSelect" class="form-select" onchange="updateInstructorRadarChart()">
+                        <option value="">Select a course...</option>
+                        {% for course in courses %}
+                            <option value="{{ course.id }}">{{ course.code }} - {{ course.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div id="instructorRadarChartContainer">
+                    <div class="alert alert-info mb-0">
+                        Please select a course above to view the Program Outcome comparison chart (Course vs Department).
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 {% if course_po_summaries %}
 <div class="cyber-panel mt-4">
     <div class="cyber-panel-header d-flex justify-content-between align-items-center">
@@ -223,4 +253,138 @@
     </div>
 </div>
 {% endif %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+let instructorRadarChartInstance = null;
+
+function updateInstructorRadarChart() {
+    const courseId = document.getElementById('courseRadarSelect').value;
+    const container = document.getElementById('instructorRadarChartContainer');
+    
+    if (!courseId) {
+        container.innerHTML = '<div class="alert alert-info mb-0">Please select a course above to view the Program Outcome comparison chart (Course vs Department).</div>';
+        if (instructorRadarChartInstance) {
+            instructorRadarChartInstance.destroy();
+            instructorRadarChartInstance = null;
+        }
+        return;
+    }
+    
+    // Fetch course data
+    const courseUrl = '{% url "instructor:radar_chart_data_with_id" "course" 0 %}'.replace('/0/', '/' + courseId + '/');
+    
+    Promise.all([
+        fetch(courseUrl).then(r => r.json()),
+        fetch('{% url "instructor:radar_chart_data" "department" %}').then(r => r.json())
+    ]).then(([courseData, deptData]) => {
+        // Destroy existing chart if any
+        if (instructorRadarChartInstance) {
+            instructorRadarChartInstance.destroy();
+        }
+        
+        // Create canvas
+        container.innerHTML = '<canvas id="instructorRadarChart"></canvas>';
+        const ctx = document.getElementById('instructorRadarChart');
+        
+        // Prepare data
+        const labels = courseData.labels || [];
+        const descriptions = courseData.descriptions || [];
+        
+        // Create chart with both datasets
+        instructorRadarChartInstance = new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Course Average',
+                        data: courseData.course_values || [],
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 2,
+                        pointBackgroundColor: 'rgba(75, 192, 192, 1)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgba(75, 192, 192, 1)',
+                    },
+                    {
+                        label: 'Department Average',
+                        data: deptData.values || [],
+                        backgroundColor: 'rgba(201, 203, 207, 0.2)',
+                        borderColor: 'rgba(201, 203, 207, 1)',
+                        borderWidth: 2,
+                        pointBackgroundColor: 'rgba(201, 203, 207, 1)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgba(201, 203, 207, 1)',
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'bottom',
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.dataset.label || '';
+                                const value = context.parsed.r;
+                                const index = context.dataIndex;
+                                const description = descriptions[index] || '';
+                                return label + ': ' + value.toFixed(1) + '% - ' + description;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    r: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            stepSize: 20,
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        },
+                        pointLabels: {
+                            font: {
+                                size: 12
+                            }
+                        }
+                    }
+                },
+                elements: {
+                    line: {
+                        borderWidth: 2
+                    }
+                }
+            }
+        });
+        
+        // Add legend with descriptions
+        const legendHtml = '<div class="row g-2 mt-3">' +
+            labels.map((label, index) => {
+                const courseVal = (courseData.course_values && courseData.course_values[index] || 0).toFixed(1);
+                const deptVal = (deptData.values && deptData.values[index] || 0).toFixed(1);
+                return `
+                    <div class="col-md-4 col-sm-6">
+                        <div class="small p-2" style="background: var(--bg-surface); border-radius: 4px;">
+                            <strong>${label}:</strong> Course ${courseVal}% | Dept ${deptVal}%<br>
+                            <span style="color: var(--text-muted); font-size: 0.75rem;">${descriptions[index]}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('') + '</div>';
+        container.innerHTML += legendHtml;
+    }).catch(error => {
+        console.error('Error loading radar chart:', error);
+        container.innerHTML = '<div class="alert alert-danger mb-0">Error loading chart data. Please try again.</div>';
+    });
+}
+</script>
 {% endblock %}

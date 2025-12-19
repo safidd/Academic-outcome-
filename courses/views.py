@@ -11,6 +11,8 @@ from outcomes.models import LearningOutcome
 from outcomes.utils import (
     calculate_instructor_course_po_scores,
     build_course_po_distributions,
+    get_po_radar_data_for_course,
+    get_po_radar_data_for_department,
 )
 from outcomes.models import ProgramOutcome
 from courses.models import Course
@@ -130,3 +132,33 @@ def get_learning_outcomes(request, course_id):
     return JsonResponse({
         'learning_outcomes': list(learning_outcomes)
     })
+
+
+@login_required
+def get_radar_chart_data(request, target_type, target_id=None):
+    """
+    API endpoint to get radar chart data for instructors.
+    
+    Args:
+        target_type: 'department' or 'course'
+        target_id: Course ID (required if target_type is 'course')
+    
+    Returns:
+        JSON response with radar chart data
+    """
+    if request.user.role != 'instructor':
+        return JsonResponse({'error': 'Unauthorized'}, status=403)
+    
+    if target_type == 'course' and target_id:
+        # Verify the course belongs to this instructor
+        course = get_object_or_404(Course, pk=target_id, instructor=request.user)
+        data = get_po_radar_data_for_course(target_id)
+        if data:
+            return JsonResponse(data)
+        return JsonResponse({'error': 'Course not found'}, status=404)
+    elif target_type == 'department':
+        # Instructors can see department average for comparison
+        data = get_po_radar_data_for_department()
+        return JsonResponse(data)
+    
+    return JsonResponse({'error': 'Invalid request'}, status=400)

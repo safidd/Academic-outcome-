@@ -1,0 +1,255 @@
+{% comment %}
+Reusable Radar Chart Component
+Usage: {% include 'outcomes/radar_chart_component.html' with chart_id='myChart' target_type='department' target_id=None %}
+{% endcomment %}
+
+<div class="radar-chart-container">
+    <div class="cyber-panel">
+        <div class="cyber-panel-header d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">Program Outcome Comparison</h4>
+            <span class="cyber-chip" id="{{ chart_id }}_status">Loading...</span>
+        </div>
+        <div class="cyber-panel-body">
+            <div class="chart-container" style="height: 400px; position: relative;">
+                <canvas id="{{ chart_id }}"></canvas>
+            </div>
+            <div id="{{ chart_id }}_legend" class="mt-3 text-center">
+                <!-- Legend will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    const chartId = '{{ chart_id }}';
+    const targetType = '{{ target_type }}';
+    const targetId = {{ target_id|default:"null" }};
+    
+    // Define renderRadarChart function first
+    function renderRadarChart(canvasId, data, type) {
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return;
+        
+        const statusEl = document.getElementById(canvasId + '_status');
+        const legendEl = document.getElementById(canvasId + '_legend');
+        
+        // Update status
+        if (type === 'department') {
+            statusEl.textContent = 'Department Average';
+        } else {
+            statusEl.textContent = data.course_name || 'Course Data';
+        }
+        
+        // Prepare datasets
+        const labels = data.labels || [];
+        const descriptions = data.descriptions || [];
+        
+        let datasets = [];
+        
+        if (type === 'department' || !data.course_values) {
+            // Single dataset for department view
+            datasets = [{
+                label: 'Department Average',
+                data: data.values || [],
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 2,
+                pointBackgroundColor: 'rgba(54, 162, 235, 1)',
+                pointBorderColor: '#fff',
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: 'rgba(54, 162, 235, 1)',
+            }];
+        } else {
+            // Two datasets for course comparison
+            datasets = [
+                {
+                    label: 'Course Average',
+                    data: data.course_values || [],
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 2,
+                    pointBackgroundColor: 'rgba(75, 192, 192, 1)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgba(75, 192, 192, 1)',
+                },
+                {
+                    label: 'Department Average',
+                    data: data.department_values || [],
+                    backgroundColor: 'rgba(201, 203, 207, 0.2)',
+                    borderColor: 'rgba(201, 203, 207, 1)',
+                    borderWidth: 2,
+                    pointBackgroundColor: 'rgba(201, 203, 207, 1)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgba(201, 203, 207, 1)',
+                }
+            ];
+        }
+        
+        // Create chart
+        new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: labels,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'bottom',
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.dataset.label || '';
+                                const value = context.parsed.r;
+                                const index = context.dataIndex;
+                                const description = descriptions[index] || '';
+                                return label + ': ' + value.toFixed(1) + '% - ' + description;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    r: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            stepSize: 20,
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        },
+                        pointLabels: {
+                            font: {
+                                size: 12
+                            }
+                        }
+                    }
+                },
+                elements: {
+                    line: {
+                        borderWidth: 2
+                    }
+                }
+            }
+        });
+        
+        // Create custom legend with descriptions
+        if (legendEl && descriptions.length > 0) {
+            let legendHtml = '<div class="row g-2">';
+            labels.forEach((label, index) => {
+                const value = type === 'department' 
+                    ? (data.values[index] || 0).toFixed(1)
+                    : (data.course_values && data.course_values[index] || 0).toFixed(1);
+                legendHtml += `
+                    <div class="col-md-4 col-sm-6">
+                        <div class="small p-2" style="background: var(--bg-surface); border-radius: 4px;">
+                            <strong>${label}:</strong> ${value}%<br>
+                            <span style="color: var(--text-muted); font-size: 0.75rem;">${descriptions[index]}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            legendHtml += '</div>';
+            legendEl.innerHTML = legendHtml;
+        }
+    }
+    
+    // Wait for both DOM and Chart.js to be ready
+    function initRadarChart() {
+        // Wait for Chart.js to load
+        function waitForChartJS(callback, maxAttempts = 50) {
+            if (typeof Chart !== 'undefined') {
+                callback();
+            } else if (maxAttempts > 0) {
+                setTimeout(() => waitForChartJS(callback, maxAttempts - 1), 100);
+            } else {
+                console.error('Chart.js not loaded after timeout');
+                const statusEl = document.getElementById(chartId + '_status');
+                if (statusEl) {
+                    statusEl.textContent = 'Chart library not loaded';
+                }
+            }
+        }
+        
+        waitForChartJS(function() {
+            // Determine API endpoint based on user role and target
+            let apiUrl;
+            {% if user.role == 'department_head' %}
+                if (targetType === 'department') {
+                    apiUrl = '{% url "head:radar_chart_data" "department" %}';
+                } else if (targetType === 'course' && targetId) {
+                    apiUrl = '{% url "head:radar_chart_data_with_id" "course" 0 %}'.replace('/0/', '/' + targetId + '/');
+                }
+            {% elif user.role == 'instructor' %}
+                if (targetType === 'department') {
+                    apiUrl = '{% url "instructor:radar_chart_data" "department" %}';
+                } else if (targetType === 'course' && targetId) {
+                    apiUrl = '{% url "instructor:radar_chart_data_with_id" "course" 0 %}'.replace('/0/', '/' + targetId + '/');
+                }
+            {% endif %}
+            
+            if (!apiUrl) {
+                const statusEl = document.getElementById(chartId + '_status');
+                if (statusEl) {
+                    statusEl.textContent = 'Invalid configuration';
+                }
+                return;
+            }
+            
+            // Fetch data and render chart
+            fetch(apiUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.error) {
+                        throw new Error(data.error);
+                    }
+                    renderRadarChart(chartId, data, targetType);
+                })
+                .catch(error => {
+                    console.error('Error loading radar chart data:', error);
+                    const statusEl = document.getElementById(chartId + '_status');
+                    if (statusEl) {
+                        statusEl.textContent = 'Error loading data';
+                    }
+                });
+        });
+    }
+    
+    // Initialize when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initRadarChart);
+    } else {
+        // DOM is already ready, but wait a bit for Chart.js
+        setTimeout(initRadarChart, 100);
+    }
+})();
+</script>
+
+<style>
+.radar-chart-container {
+    margin-bottom: 2rem;
+}
+
+.chart-container {
+    min-height: 400px;
+}
+
+@media (max-width: 768px) {
+    .chart-container {
+        height: 300px !important;
+    }
+}
+</style>
+

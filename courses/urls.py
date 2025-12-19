@@ -7,5 +7,7 @@ urlpatterns = [
     path('dashboard/', views.instructor_dashboard, name='dashboard'),
     path('enter-grade/', views.enter_grade, name='enter_grade'),
     path('api/learning-outcomes/<int:course_id>/', views.get_learning_outcomes, name='get_learning_outcomes'),
+    path('api/radar-chart/<str:target_type>/', views.get_radar_chart_data, name='radar_chart_data'),
+    path('api/radar-chart/<str:target_type>/<int:target_id>/', views.get_radar_chart_data, name='radar_chart_data_with_id'),
 ]
 

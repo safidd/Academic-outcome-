@@ -221,3 +221,99 @@ def build_course_po_distributions(course_ids):
     
     return distributions
 
+
+def get_po_radar_data_for_department():
+    """
+    Get Program Outcome data for Department Head radar chart.
+    Returns average achievement for each PO across the entire department.
+    
+    Returns:
+    dict: {
+        'labels': [PO codes],
+        'descriptions': [PO descriptions],
+        'values': [average scores],
+    }
+    """
+    from .models import ProgramOutcome
+    
+    # Get department averages
+    department_averages = calculate_department_po_averages()
+    
+    # Get all program outcomes ordered by code
+    program_outcomes = ProgramOutcome.objects.all().order_by('code')
+    
+    labels = []
+    descriptions = []
+    values = []
+    
+    for po in program_outcomes:
+        labels.append(po.code)
+        descriptions.append(po.description)
+        values.append(department_averages.get(po.code, 0.0))
+    
+    return {
+        'labels': labels,
+        'descriptions': descriptions,
+        'values': values,
+    }
+
+
+def get_po_radar_data_for_course(course_id):
+    """
+    Get Program Outcome data for a specific course.
+    
+    Args:
+        course_id: ID of the course
+    
+    Returns:
+    dict: {
+        'labels': [PO codes],
+        'descriptions': [PO descriptions],
+        'course_values': [course average scores],
+        'department_values': [department average scores],
+    }
+    """
+    from .models import ProgramOutcome
+    from courses.models import Course
+    
+    try:
+        course = Course.objects.get(id=course_id)
+    except Course.DoesNotExist:
+        return None
+    
+    # Get department averages for comparison
+    department_averages = calculate_department_po_averages()
+    
+    # Get course PO scores
+    course_po_breakdown = calculate_department_course_po_scores()
+    course_data = next((entry for entry in course_po_breakdown if entry['course'].id == course_id), None)
+    
+    # Get all program outcomes ordered by code
+    program_outcomes = ProgramOutcome.objects.all().order_by('code')
+    
+    labels = []
+    descriptions = []
+    course_values = []
+    department_values = []
+    
+    for po in program_outcomes:
+        labels.append(po.code)
+        descriptions.append(po.description)
+        
+        # Course value
+        if course_data and 'po_scores' in course_data:
+            course_values.append(course_data['po_scores'].get(po.code, 0.0))
+        else:
+            course_values.append(0.0)
+        
+        # Department value
+        department_values.append(department_averages.get(po.code, 0.0))
+    
+    return {
+        'labels': labels,
+        'descriptions': descriptions,
+        'course_values': course_values,
+        'department_values': department_values,
+        'course_name': f"{course.code} - {course.name}",
+    }
+
