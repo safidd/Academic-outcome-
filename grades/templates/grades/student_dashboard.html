@@ -94,13 +94,46 @@
                     <p class="metric-value">{{ grades|length }}</p>
                     <p style="color: var(--text-muted);">Keep up the momentum by finishing remaining assessments.</p>
                 </div>
-                <div>
+                <div class="mb-4">
                     <p class="cyber-eyebrow mb-1">Tracked Program Outcomes</p>
                     <p class="metric-value">{{ po_scores|length }}</p>
                     <p style="color: var(--text-muted);">Scores update as soon as related learning outcomes are graded.</p>
                 </div>
+                {% if overall_attendance_percentage is not None %}
+                <div>
+                    <p class="cyber-eyebrow mb-1">Overall Attendance</p>
+                    <p class="metric-value">{{ overall_attendance_percentage }}%</p>
+                    <p style="color: var(--text-muted);">View detailed attendance records.</p>
+                    <a href="{% url 'student:attendance' %}" class="btn btn-primary btn-sm mt-2">View Attendance</a>
+                </div>
+                {% endif %}
             </div>
         </div>
+        
+        {% if attendance_by_course %}
+        <div class="cyber-panel mt-4">
+            <div class="cyber-panel-header d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">Attendance by Course</h4>
+                <a href="{% url 'student:attendance' %}" class="cyber-chip" style="text-decoration: none;">View All</a>
+            </div>
+            <div class="cyber-panel-body">
+                {% for course, attendance_data in attendance_by_course.items %}
+                    <div class="mb-3 {% if not forloop.last %}border-bottom pb-3{% endif %}">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <strong style="color: var(--text-primary);">{{ course.code }}</strong>
+                            <span class="badge fw-semibold" style="background: var(--navy); color: var(--accent); border: 2px solid var(--accent);">
+                                {{ attendance_data.percentage }}%
+                            </span>
+                        </div>
+                        <div style="color: var(--text-muted); font-size: 0.875rem;">
+                            <div>Present: {{ attendance_data.present }} | Late: {{ attendance_data.late }} | Absent: {{ attendance_data.absent }}</div>
+                            <div class="mt-1">Total: {{ attendance_data.total }} sessions</div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
 

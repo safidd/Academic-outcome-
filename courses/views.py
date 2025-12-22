@@ -1,10 +1,11 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
-from django.http import HttpResponseForbidden
+from django.http import HttpResponseForbidden, JsonResponse
 from django.contrib import messages
-from django.http import JsonResponse
 from django.db import models
+from django.utils import timezone
+from datetime import date
 from grades.forms import GradeEntryForm
 from grades.models import Grade
 from outcomes.models import LearningOutcome
@@ -15,7 +16,8 @@ from outcomes.utils import (
     get_po_radar_data_for_department,
 )
 from outcomes.models import ProgramOutcome
-from courses.models import Course
+from courses.models import Course, Attendance
+from courses.forms import AttendanceForm
 
 
 @login_required
@@ -162,3 +164,81 @@ def get_radar_chart_data(request, target_type, target_id=None):
         return JsonResponse(data)
     
     return JsonResponse({'error': 'Invalid request'}, status=400)
+
+
+@login_required
+def take_attendance(request):
+    """Instructor view for taking attendance"""
+    if request.user.role != 'instructor':
+        raise PermissionDenied("Only instructors can access this page.")
+    
+    if request.method == 'POST':
+        form = AttendanceForm(request.POST, instructor=request.user)
+        
+        if form.is_valid():
+            # Extract attendance data from POST
+            attendance_data = {}
+            for key, value in request.POST.items():
+                if key.startswith('student_'):
+                    student_id = int(key.replace('student_', ''))
+                    attendance_data[student_id] = value
+            
+            if attendance_data:
+                created_count, updated_count = form.save_attendance(attendance_data)
+                messages.success(
+                    request,
+                    f'Attendance saved successfully! Created: {created_count}, Updated: {updated_count}'
+                )
+                return redirect('instructor:take_attendance')
+            else:
+                messages.error(request, 'Please select attendance status for at least one student.')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = AttendanceForm(instructor=request.user)
+    
+    # Get selected course and date for displaying students
+    selected_course = None
+    selected_date = date.today()
+    students = []
+    existing_attendance = {}
+    
+    if 'course' in request.GET:
+        try:
+            course_id = int(request.GET['course'])
+            selected_course = get_object_or_404(
+                Course,
+                pk=course_id,
+                instructor=request.user
+            )
+            students = selected_course.get_enrolled_students()
+            
+            # Get existing attendance for selected date
+            if 'date' in request.GET:
+                try:
+                    selected_date = date.fromisoformat(request.GET['date'])
+                except (ValueError, TypeError):
+                    selected_date = date.today()
+            
+            existing_attendance = {
+                att.student.id: att.status
+                for att in Attendance.objects.filter(
+                    course=selected_course,
+                    date=selected_date
+                )
+            }
+        except (ValueError, Course.DoesNotExist):
+            pass
+    
+    # Get all courses for dropdown
+    courses = request.user.courses_taught.all()
+    
+    return render(request, 'courses/take_attendance.html', {
+        'form': form,
+        'courses': courses,
+        'selected_course': selected_course,
+        'selected_date': selected_date,
+        'students': students,
+        'existing_attendance': existing_attendance,
+        'user': request.user,
+    })

@@ -3,6 +3,8 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db.models import Count, Avg
+from django.http import JsonResponse
+import json
 from .models import ProgramOutcome
 from courses.models import Course
 from grades.models import Grade
@@ -13,6 +15,7 @@ from .utils import (
     calculate_po_scores,
     get_po_radar_data_for_department,
     get_po_radar_data_for_course,
+    calculate_course_attendance_averages,
 )
 
 
@@ -224,3 +227,48 @@ def get_radar_chart_data(request, target_type, target_id=None):
             return JsonResponse(data)
     
     return JsonResponse({'error': 'Unauthorized'}, status=403)
+
+
+@login_required
+def attendance_dashboard(request):
+    """Department Head attendance dashboard showing course attendance averages"""
+    if request.user.role != 'department_head':
+        raise PermissionDenied("Only department heads can access this page.")
+    
+    # Get all course attendance data
+    course_attendance = calculate_course_attendance_averages()
+    
+    # Handle search/filter
+    search_query = request.GET.get('search', '').strip()
+    filtered_attendance = course_attendance
+    
+    if search_query:
+        search_lower = search_query.lower()
+        filtered_attendance = [
+            item for item in course_attendance
+            if (search_lower in item['course'].code.lower() or
+                search_lower in item['course'].name.lower() or
+                (item['course'].instructor.first_name and search_lower in item['course'].instructor.first_name.lower()) or
+                (item['course'].instructor.last_name and search_lower in item['course'].instructor.last_name.lower()) or
+                search_lower in item['course'].instructor.username.lower())
+        ]
+    
+    # Prepare data for bar chart
+    chart_labels = [item['course'].code for item in filtered_attendance]
+    chart_percentages = [item['attendance_percentage'] for item in filtered_attendance]
+    chart_colors = [
+        '#28a745' if item['attendance_percentage'] >= 85 else
+        '#ffc107' if item['attendance_percentage'] >= 70 else
+        '#dc3545'
+        for item in filtered_attendance
+    ]
+    
+    return render(request, 'outcomes/attendance_dashboard.html', {
+        'course_attendance': filtered_attendance,
+        'total_courses': len(course_attendance),
+        'filtered_count': len(filtered_attendance),
+        'search_query': search_query,
+        'chart_labels': json.dumps(chart_labels),
+        'chart_percentages': json.dumps(chart_percentages),
+        'chart_colors': json.dumps(chart_colors),
+    })

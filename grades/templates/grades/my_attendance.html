@@ -1,0 +1,145 @@
+{% extends 'users/base.html' %}
+{% load dict_filters %}
+
+{% block title %}My Attendance - Academic Outcome Tracker{% endblock %}
+
+{% block content %}
+<div class="cyber-hero mb-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between gap-3 align-items-start">
+        <div>
+            <p class="cyber-eyebrow mb-2">Student Interface</p>
+            <h2 class="mb-2">My Attendance</h2>
+            <p class="metric-subtext mb-0">
+                Track your attendance across all courses with detailed records and statistics.
+            </p>
+        </div>
+        {% if overall_percentage is not None %}
+        <div class="text-center">
+            <div class="metric-value" style="font-size: 3rem;">{{ overall_percentage }}%</div>
+            <div class="cyber-eyebrow">Overall Attendance</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if course_stats %}
+<div class="row g-4 mb-4">
+    {% for course, stats in course_stats.items %}
+    <div class="col-md-6 col-lg-4">
+        <div class="cyber-panel">
+            <div class="cyber-panel-header">
+                <h5 class="mb-0">{{ course.code }}</h5>
+            </div>
+            <div class="cyber-panel-body">
+                <div class="text-center mb-3">
+                    <div class="metric-value" style="font-size: 2.5rem;">{{ stats.percentage }}%</div>
+                    <div style="color: var(--text-muted); font-size: 0.875rem;">Attendance Rate</div>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span style="color: #28a745;">● Present:</span>
+                    <strong>{{ stats.present }}</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span style="color: #ffc107;">● Late:</span>
+                    <strong>{{ stats.late }}</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span style="color: #dc3545;">● Absent:</span>
+                    <strong>{{ stats.absent }}</strong>
+                </div>
+                <div class="d-flex justify-content-between mt-3 pt-3 border-top">
+                    <strong>Total Sessions:</strong>
+                    <strong>{{ stats.total }}</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="cyber-panel">
+    <div class="cyber-panel-header d-flex justify-content-between align-items-center">
+        <h4 class="mb-0">Attendance History</h4>
+        <span class="cyber-chip">{{ total_records }} records</span>
+    </div>
+    <div class="cyber-panel-body">
+        {% if attendance_records %}
+            <div class="table-responsive">
+                <table class="table neon-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Course</th>
+                            <th class="text-center">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in attendance_records %}
+                        <tr>
+                            <td>{{ record.date|date:"M d, Y" }}</td>
+                            <td>
+                                <strong>{{ record.course.code }}</strong>
+                                <div style="color: var(--text-muted); font-size: 0.875rem;">{{ record.course.name }}</div>
+                            </td>
+                            <td class="text-center">
+                                {% if record.status == 'Present' %}
+                                    <span class="badge" style="background-color: #28a745; color: white; padding: 0.5rem 1rem;">
+                                        ✓ Present
+                                    </span>
+                                {% elif record.status == 'Late' %}
+                                    <span class="badge" style="background-color: #ffc107; color: #000; padding: 0.5rem 1rem;">
+                                        ⏱ Late
+                                    </span>
+                                {% elif record.status == 'Absent' %}
+                                    <span class="badge" style="background-color: #dc3545; color: white; padding: 0.5rem 1rem;">
+                                        ✗ Absent
+                                    </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="alert alert-info mb-0">
+                <strong>No attendance records found.</strong> Your attendance will appear here once your instructors start recording it.
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    /* Color coding for status badges */
+    .badge {
+        font-weight: 500;
+        border-radius: 6px;
+    }
+    
+    /* Responsive design */
+    @media (max-width: 768px) {
+        .table-responsive {
+            font-size: 0.875rem;
+        }
+        
+        .table th, .table td {
+            padding: 0.75rem 0.5rem;
+        }
+        
+        .metric-value {
+            font-size: 2rem !important;
+        }
+        
+        .cyber-panel-body {
+            padding: 1rem;
+        }
+    }
+    
+    /* Dark theme adjustments */
+    .dark-theme .table tbody tr:hover {
+        background-color: rgba(255, 107, 53, 0.1);
+    }
+</style>
+{% endblock %}
+

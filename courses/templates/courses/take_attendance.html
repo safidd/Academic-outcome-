@@ -1,0 +1,193 @@
+{% extends 'users/base.html' %}
+{% load dict_filters %}
+
+{% block title %}Take Attendance - Academic Outcome Tracker{% endblock %}
+
+{% block content %}
+<div class="cyber-hero mb-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between gap-3 align-items-start">
+        <div>
+            <p class="cyber-eyebrow mb-2">Instructor · Attendance</p>
+            <h2 class="mb-2">Record Class Attendance</h2>
+            <p class="metric-subtext mb-0">
+                Select a course and date, then mark each student's attendance status.
+            </p>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-12">
+        <div class="cyber-panel">
+            <div class="cyber-panel-header">
+                <h4 class="mb-0">Select Course & Date</h4>
+            </div>
+            <div class="cyber-panel-body">
+                <form method="get" id="courseDateForm" class="row g-3">
+                    <div class="col-md-5">
+                        <label for="course" class="form-label">Course</label>
+                        <select name="course" id="course" class="form-select" required>
+                            <option value="">Select a course...</option>
+                            {% for course in courses %}
+                                <option value="{{ course.id }}" {% if selected_course and selected_course.id == course.id %}selected{% endif %}>
+                                    {{ course.code }} - {{ course.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-5">
+                        <label for="date" class="form-label">Date</label>
+                        <input type="date" name="date" id="date" class="form-control" value="{{ selected_date|date:'Y-m-d' }}" required>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">Load Students</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if selected_course and students %}
+<div class="row g-4 mt-2">
+    <div class="col-12">
+        <div class="cyber-panel">
+            <div class="cyber-panel-header d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">{{ selected_course.code }} - {{ selected_course.name }}</h4>
+                <span class="cyber-chip">{{ students|length }} students</span>
+            </div>
+            <div class="cyber-panel-body">
+                <form method="post" id="attendanceForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="course" value="{{ selected_course.id }}">
+                    <input type="hidden" name="date" value="{{ selected_date|date:'Y-m-d' }}">
+                    
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 5%;">#</th>
+                                    <th style="width: 35%;">Student Name</th>
+                                    <th style="width: 20%;" class="text-center">Present</th>
+                                    <th style="width: 20%;" class="text-center">Late</th>
+                                    <th style="width: 20%;" class="text-center">Absent</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for student in students %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>
+                                        <strong>{{ student.first_name }} {{ student.last_name }}</strong>
+                                        <div style="color: var(--text-muted); font-size: 0.875rem;">{{ student.username }}</div>
+                                    </td>
+                                    <td class="text-center">
+                                        <input type="radio" 
+                                               name="student_{{ student.id }}" 
+                                               id="present_{{ student.id }}" 
+                                               value="Present" 
+                                               class="form-check-input"
+                                               {% if existing_attendance|get_item:student.id == 'Present' %}checked{% elif not existing_attendance %}checked{% endif %}
+                                               required>
+                                        <label for="present_{{ student.id }}" class="form-check-label d-none">Present</label>
+                                    </td>
+                                    <td class="text-center">
+                                        <input type="radio" 
+                                               name="student_{{ student.id }}" 
+                                               id="late_{{ student.id }}" 
+                                               value="Late" 
+                                               class="form-check-input"
+                                               {% if existing_attendance|get_item:student.id == 'Late' %}checked{% endif %}>
+                                        <label for="late_{{ student.id }}" class="form-check-label d-none">Late</label>
+                                    </td>
+                                    <td class="text-center">
+                                        <input type="radio" 
+                                               name="student_{{ student.id }}" 
+                                               id="absent_{{ student.id }}" 
+                                               value="Absent" 
+                                               class="form-check-input"
+                                               {% if existing_attendance|get_item:student.id == 'Absent' %}checked{% endif %}>
+                                        <label for="absent_{{ student.id }}" class="form-check-label d-none">Absent</label>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="mt-4 d-flex justify-content-end gap-2">
+                        <a href="{% url 'instructor:dashboard' %}" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Submit Attendance</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% elif selected_course and not students %}
+<div class="row g-4 mt-2">
+    <div class="col-12">
+        <div class="alert alert-info">
+            <strong>No enrolled students found.</strong> Students must have grades entered for this course to appear in the attendance list.
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<style>
+    /* Responsive design for mobile/tablet */
+    @media (max-width: 768px) {
+        .table-responsive {
+            font-size: 0.875rem;
+        }
+        
+        .table th, .table td {
+            padding: 0.5rem 0.25rem;
+        }
+        
+        .table th:nth-child(1),
+        .table td:nth-child(1) {
+            display: none; /* Hide # column on mobile */
+        }
+        
+        .form-check-input {
+            width: 1.5rem;
+            height: 1.5rem;
+            cursor: pointer;
+        }
+        
+        .cyber-panel-body {
+            padding: 1rem;
+        }
+    }
+    
+    /* Radio button styling */
+    .form-check-input {
+        cursor: pointer;
+        width: 1.25rem;
+        height: 1.25rem;
+    }
+    
+    .form-check-input:checked {
+        background-color: var(--accent);
+        border-color: var(--accent);
+    }
+    
+    .table tbody tr:hover {
+        background-color: rgba(255, 107, 53, 0.05);
+    }
+    
+    .dark-theme .table tbody tr:hover {
+        background-color: rgba(255, 107, 53, 0.1);
+    }
+</style>
+
+<script>
+    // Auto-submit form when course or date changes (optional enhancement)
+    document.getElementById('courseDateForm')?.addEventListener('change', function() {
+        // Uncomment to auto-submit on change
+        // this.submit();
+    });
+</script>
+{% endblock %}
+

@@ -2,6 +2,7 @@ from collections import defaultdict
 from django.contrib.auth import get_user_model
 from .models import ProgramOutcome, ContributionRate
 from grades.models import Grade
+from courses.models import Course
 
 
 def calculate_po_scores(student):
@@ -101,6 +102,67 @@ def calculate_department_po_averages():
             department_averages[po_code] = 0.0
     
     return department_averages
+
+
+def calculate_course_attendance_averages():
+    """
+    Calculate average attendance rate for each course in the department.
+    
+    Formula: (Count of 'Present') / Total attendance records * 100
+    
+    Returns:
+        list: List of dicts with course info and attendance statistics
+            [
+                {
+                    'course': Course instance,
+                    'attendance_percentage': float,
+                    'total_records': int,
+                    'present_count': int,
+                    'late_count': int,
+                    'absent_count': int,
+                    'enrolled_students': int,
+                },
+                ...
+            ]
+    """
+    from courses.models import Attendance
+    from grades.models import Grade
+    
+    courses = Course.objects.select_related('instructor').all()
+    course_attendance = []
+    
+    for course in courses:
+        attendance_records = Attendance.objects.filter(course=course)
+        
+        # Calculate statistics
+        total_records = attendance_records.count()
+        present_count = attendance_records.filter(status='Present').count()
+        late_count = attendance_records.filter(status='Late').count()
+        absent_count = attendance_records.filter(status='Absent').count()
+        
+        # Calculate percentage: (Present / Total) * 100
+        if total_records > 0:
+            attendance_percentage = round((present_count / total_records) * 100, 1)
+        else:
+            attendance_percentage = 0.0
+        
+        # Get enrolled students count
+        enrolled_students = Grade.objects.filter(course=course).values('student').distinct().count()
+        
+        course_attendance.append({
+            'course': course,
+            'attendance_percentage': attendance_percentage,
+            'total_records': total_records,
+            'present_count': present_count,
+            'late_count': late_count,
+            'absent_count': absent_count,
+            'enrolled_students': enrolled_students,
+        })
+    
+    # Sort by attendance percentage (descending)
+    course_attendance.sort(key=lambda x: x['attendance_percentage'], reverse=True)
+    
+    return course_attendance
 
 
 def _aggregate_course_po_scores(grades_queryset):
