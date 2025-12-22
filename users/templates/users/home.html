@@ -61,6 +61,7 @@
         border-radius: 20px;
         box-shadow: var(--shadow);
         overflow: hidden;
+        transition: all 0.3s ease;
     }
     .entry-panel-header {
         background: #348AC7;
@@ -69,6 +70,7 @@
         font-weight: 600;
         font-size: 1.1rem;
         text-align: center;
+        transition: all 0.3s ease;
     }
     .entry-panel-body {
         padding: 0;
@@ -79,7 +81,7 @@
         color: var(--text-primary);
         text-decoration: none;
         border-bottom: 1px solid var(--border);
-        transition: all 0.2s ease;
+        transition: all 0.3s ease;
         background: var(--white);
     }
     .entry-option:last-child {
@@ -94,6 +96,44 @@
         display: block;
         font-size: 1rem;
         font-weight: 500;
+    }
+    
+    /* Dark Theme Styles */
+    .dark-theme .entry-selection-panel {
+        background: #1a1f2e; /* Deep navy-dark background */
+        border-color: rgba(232, 232, 232, 0.15);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+    
+    .dark-theme .entry-panel-header {
+        background: #4a9fd8; /* More vibrant, slightly desaturated blue */
+        color: #ffffff;
+    }
+    
+    .dark-theme .entry-panel-body {
+        background: #1a1f2e; /* Deep navy-dark background */
+    }
+    
+    .dark-theme .entry-option {
+        background: #1a1f2e; /* Deep navy-dark background */
+        color: #f5f5f5; /* Light silver / Pure white for high contrast */
+        border-bottom-color: #2d3440; /* Subtle dark-gray divider */
+    }
+    
+    .dark-theme .entry-option:last-child {
+        border-bottom: none;
+    }
+    
+    .dark-theme .entry-option:hover {
+        background: #2d3440; /* Lighter gray background on hover */
+        color: #ffffff; /* Pure white on hover */
+        box-shadow: 0 0 12px rgba(74, 159, 216, 0.3); /* Subtle blue glow */
+        transform: translateX(5px);
+    }
+    
+    .dark-theme .entry-option:active {
+        background: #3a4150; /* Slightly lighter for active/selected state */
+        box-shadow: 0 0 16px rgba(74, 159, 216, 0.5); /* Stronger glow on selection */
     }
 </style>
 {% endblock %}
