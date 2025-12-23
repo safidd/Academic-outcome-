@@ -3,7 +3,8 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponseForbidden, JsonResponse
 from django.contrib import messages
-from django.db import models
+from django.contrib.auth import get_user_model
+from django.db import models, transaction
 from django.utils import timezone
 from datetime import date
 from grades.forms import GradeEntryForm
@@ -18,6 +19,8 @@ from outcomes.utils import (
 from outcomes.models import ProgramOutcome
 from courses.models import Course, Attendance
 from courses.forms import AttendanceForm
+
+User = get_user_model()
 
 
 @login_required
@@ -166,6 +169,114 @@ def get_radar_chart_data(request, target_type, target_id=None):
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
 
+def sync_attendance_api(request):
+    """
+    Idempotent API endpoint for syncing attendance records.
+    Handles duplicate submissions gracefully using unique constraint.
+    """
+    # Check authentication
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+    
+    # Check authorization
+    if request.user.role != 'instructor':
+        return JsonResponse({'success': False, 'error': 'Unauthorized - Instructor access required'}, status=403)
+    
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    try:
+        import json
+        data = json.loads(request.body)
+        
+        course_id = data.get('course')
+        date_str = data.get('date')
+        attendance_data = data.get('attendance_data', {})
+        
+        if not course_id or not date_str or not attendance_data:
+            return JsonResponse({
+                'success': False,
+                'error': 'Missing required fields: course, date, attendance_data'
+            }, status=400)
+        
+        # Verify course belongs to instructor
+        course = get_object_or_404(Course, pk=course_id, instructor=request.user)
+        
+        # Parse date
+        from datetime import datetime
+        try:
+            attendance_date = datetime.fromisoformat(date_str.replace('Z', '+00:00')).date()
+        except (ValueError, AttributeError):
+            try:
+                attendance_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            except ValueError:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Invalid date format'
+                }, status=400)
+        
+        # Use transaction for atomicity
+        created_count = 0
+        updated_count = 0
+        
+        try:
+            with transaction.atomic():
+                for student_id, status in attendance_data.items():
+                    try:
+                        student_id_int = int(student_id)
+                    except (ValueError, TypeError):
+                        continue
+                    
+                    # Validate status
+                    valid_statuses = ['Present', 'Absent', 'Late']
+                    if status not in valid_statuses:
+                        continue
+                    
+                    try:
+                        student = User.objects.get(id=student_id_int, role='student')
+                    except User.DoesNotExist:
+                        continue
+                    
+                    # Idempotent operation: update_or_create handles duplicates
+                    # Uses unique constraint on (student, course, date) to prevent duplicates
+                    attendance, created = Attendance.objects.update_or_create(
+                        student=student,
+                        course=course,
+                        date=attendance_date,
+                        defaults={'status': status}
+                    )
+                    
+                    if created:
+                        created_count += 1
+                    else:
+                        updated_count += 1
+                
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Synced {created_count + updated_count} records',
+                    'created': created_count,
+                    'updated': updated_count
+                })
+                
+        except Exception as e:
+            import traceback
+            return JsonResponse({
+                'success': False,
+                'error': f'Database error: {str(e)}'
+            }, status=500)
+            
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
 @login_required
 def take_attendance(request):
     """Instructor view for taking attendance"""
@@ -180,16 +291,29 @@ def take_attendance(request):
             attendance_data = {}
             for key, value in request.POST.items():
                 if key.startswith('student_'):
-                    student_id = int(key.replace('student_', ''))
-                    attendance_data[student_id] = value
+                    try:
+                        student_id = int(key.replace('student_', ''))
+                        attendance_data[student_id] = value
+                    except ValueError:
+                        messages.error(request, f'Invalid student ID: {key}')
+                        return redirect('instructor:take_attendance')
             
             if attendance_data:
-                created_count, updated_count = form.save_attendance(attendance_data)
-                messages.success(
-                    request,
-                    f'Attendance saved successfully! Created: {created_count}, Updated: {updated_count}'
-                )
-                return redirect('instructor:take_attendance')
+                # Save attendance with transaction atomicity
+                success, created_count, updated_count, error_message = form.save_attendance(attendance_data)
+                
+                if success:
+                    messages.success(
+                        request,
+                        f'Attendance saved successfully! Created: {created_count}, Updated: {updated_count}'
+                    )
+                    return redirect('instructor:take_attendance')
+                else:
+                    # Transaction was rolled back
+                    messages.error(
+                        request,
+                        f'Failed to save attendance: {error_message}. No changes were made. Please try again.'
+                    )
             else:
                 messages.error(request, 'Please select attendance status for at least one student.')
         else:

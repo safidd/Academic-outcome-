@@ -25,35 +25,69 @@ class AttendanceForm(forms.Form):
     
     def save_attendance(self, attendance_data):
         """
-        Bulk save/update attendance records
+        Bulk save/update attendance records with transaction atomicity.
+        
+        Uses database transactions to ensure all-or-nothing behavior.
+        If any record fails, the entire transaction is rolled back.
         
         Args:
             attendance_data: Dict mapping student_id to status
                 Example: {1: 'Present', 2: 'Absent', 3: 'Late'}
         
         Returns:
-            tuple: (created_count, updated_count)
+            tuple: (success: bool, created_count: int, updated_count: int, error_message: str)
+        
+        Raises:
+            Exception: If transaction fails, raises the original exception
         """
+        from django.db import transaction
+        from django.core.exceptions import ValidationError
+        
         course = self.cleaned_data['course']
         date = self.cleaned_data['date']
         
         created_count = 0
         updated_count = 0
         
-        for student_id, status in attendance_data.items():
-            student = User.objects.get(id=student_id, role='student')
-            
-            attendance, created = Attendance.objects.update_or_create(
-                student=student,
-                course=course,
-                date=date,
-                defaults={'status': status}
-            )
-            
-            if created:
-                created_count += 1
-            else:
-                updated_count += 1
-        
-        return created_count, updated_count
+        try:
+            # Start transaction - ensures atomicity
+            # Django uses 'READ COMMITTED' isolation level by default (or SERIALIZABLE for SQLite)
+            with transaction.atomic():
+                # Process each student's attendance
+                for student_id, status in attendance_data.items():
+                    try:
+                        student = User.objects.select_for_update().get(
+                            id=student_id, 
+                            role='student'
+                        )
+                    except User.DoesNotExist:
+                        raise ValueError(f"Student with ID {student_id} not found")
+                    
+                    # Validate status
+                    valid_statuses = ['Present', 'Absent', 'Late']
+                    if status not in valid_statuses:
+                        raise ValidationError(f"Invalid status: {status}. Must be one of {valid_statuses}")
+                    
+                    # Use update_or_create with select_for_update for concurrency protection
+                    attendance, created = Attendance.objects.select_for_update().update_or_create(
+                        student=student,
+                        course=course,
+                        date=date,
+                        defaults={'status': status}
+                    )
+                    
+                    if created:
+                        created_count += 1
+                    else:
+                        updated_count += 1
+                
+                # If we reach here, all records were processed successfully
+                # Transaction will automatically commit
+                return True, created_count, updated_count, None
+                
+        except Exception as e:
+            # Transaction will automatically rollback on any exception
+            # Return error information
+            error_message = f"Failed to save attendance: {str(e)}"
+            return False, created_count, updated_count, error_message
 

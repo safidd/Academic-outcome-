@@ -1,5 +1,6 @@
 {% extends 'users/base.html' %}
 {% load dict_filters %}
+{% load static %}
 
 {% block title %}Take Attendance - Academic Outcome Tracker{% endblock %}
 
@@ -12,6 +13,14 @@
             <p class="metric-subtext mb-0">
                 Select a course and date, then mark each student's attendance status.
             </p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <div id="syncStatusIndicator" class="sync-status synced" title="Sync status">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                    <polyline points="22 4 12 14.01 9 11.01"/>
+                </svg>
+            </div>
         </div>
     </div>
 </div>
@@ -182,12 +191,148 @@
     }
 </style>
 
+<!-- Offline Storage Script -->
+<script src="{% static 'js/attendance-offline.js' %}"></script>
+
 <script>
     // Auto-submit form when course or date changes (optional enhancement)
     document.getElementById('courseDateForm')?.addEventListener('change', function() {
         // Uncomment to auto-submit on change
         // this.submit();
     });
+
+    // Offline-first attendance submission
+    document.getElementById('attendanceForm')?.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const form = e.target;
+        const formData = new FormData(form);
+        const courseId = formData.get('course');
+        const date = formData.get('date');
+        
+        // Extract attendance data
+        const attendanceData = {};
+        for (const [key, value] of formData.entries()) {
+            if (key.startsWith('student_')) {
+                const studentId = key.replace('student_', '');
+                attendanceData[studentId] = value;
+            }
+        }
+        
+        if (Object.keys(attendanceData).length === 0) {
+            alert('Please select attendance status for at least one student.');
+            return;
+        }
+        
+        // Save to IndexedDB first (offline-first)
+        if (attendanceStorage && typeof indexedDB !== 'undefined') {
+            try {
+                await attendanceStorage.saveAttendance(courseId, date, attendanceData);
+                
+                // Update sync status
+                if (attendanceSync) {
+                    attendanceSync.updateSyncStatus();
+                }
+                
+                // Try to sync immediately if online
+                if (navigator.onLine && attendanceSync) {
+                    const syncResult = await attendanceSync.syncPendingRecords();
+                    if (syncResult.success) {
+                        // Show success message
+                        const message = syncResult.synced > 0 
+                            ? `Attendance saved and synced! (${syncResult.synced} records)`
+                            : 'Attendance saved locally. Syncing...';
+                        alert(message);
+                        
+                        // Reload page to show updated status
+                        window.location.reload();
+                        return;
+                    }
+                }
+                
+                // If offline or sync failed, show offline message
+                alert('Attendance saved locally. It will sync automatically when connection is restored.');
+                
+                // Reload page
+                window.location.reload();
+                
+            } catch (error) {
+                console.error('Error saving attendance:', error);
+                alert('Error saving attendance. Please try again.');
+            }
+        } else {
+            // Fallback to traditional form submission if IndexedDB not available
+            form.submit();
+        }
+    });
 </script>
+
+<style>
+    /* Sync Status Indicator */
+    .sync-status {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .sync-status svg {
+        width: 20px;
+        height: 20px;
+    }
+    
+    .sync-status.synced {
+        background-color: rgba(40, 167, 69, 0.1);
+        color: #28a745;
+        border: 1px solid #28a745;
+    }
+    
+    .sync-status.pending {
+        background-color: rgba(255, 193, 7, 0.1);
+        color: #ffc107;
+        border: 1px solid #ffc107;
+        animation: pulse 2s infinite;
+    }
+    
+    .sync-status.offline {
+        background-color: rgba(108, 117, 125, 0.1);
+        color: #6c757d;
+        border: 1px solid #6c757d;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.6; }
+    }
+    
+    .sync-notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: var(--accent);
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        z-index: 10000;
+        display: none;
+    }
+    
+    .dark-theme .sync-status.synced {
+        background-color: rgba(40, 167, 69, 0.2);
+    }
+    
+    .dark-theme .sync-status.pending {
+        background-color: rgba(255, 193, 7, 0.2);
+    }
+    
+    .dark-theme .sync-status.offline {
+        background-color: rgba(108, 117, 125, 0.2);
+    }
+</style>
 {% endblock %}
 

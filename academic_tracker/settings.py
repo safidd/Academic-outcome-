@@ -81,6 +81,15 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
+        'OPTIONS': {
+            # SQLite uses SERIALIZABLE isolation level by default
+            # This prevents dirty reads and ensures transaction isolation
+            'timeout': 20,  # Wait up to 20 seconds for database lock
+        },
+        # For PostgreSQL, you would use:
+        # 'OPTIONS': {
+        #     'isolation_level': psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED,
+        # },
     }
 }
 
@@ -120,6 +129,9 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
