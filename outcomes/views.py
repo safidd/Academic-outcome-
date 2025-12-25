@@ -4,10 +4,13 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db.models import Count, Avg
 from django.http import JsonResponse
+from django.utils import timezone
 import json
+from datetime import datetime
 from .models import ProgramOutcome
 from courses.models import Course
 from grades.models import Grade
+from grades.utils import generate_grade_audit_report, get_historical_snapshots, get_weekly_snapshot_times
 from .utils import (
     calculate_department_po_averages,
     calculate_department_course_po_scores,
@@ -227,6 +230,80 @@ def get_radar_chart_data(request, target_type, target_id=None):
             return JsonResponse(data)
     
     return JsonResponse({'error': 'Unauthorized'}, status=403)
+
+
+@login_required
+def grade_audit_report(request):
+    """
+    Department Head grade audit report with snapshot isolation.
+    Prevents read skew by using MVCC and transaction isolation.
+    """
+    if request.user.role != 'department_head':
+        raise PermissionDenied("Only department heads can access this page.")
+    
+    # Get snapshot time from request (for time travel)
+    snapshot_time_str = request.GET.get('snapshot_time')
+    snapshot_time = None
+    
+    if snapshot_time_str:
+        try:
+            snapshot_time = datetime.fromisoformat(snapshot_time_str.replace('Z', '+00:00'))
+            if timezone.is_naive(snapshot_time):
+                snapshot_time = timezone.make_aware(snapshot_time)
+        except (ValueError, AttributeError):
+            snapshot_time = None
+    
+    # Get filters
+    course_filter = request.GET.get('course_id')
+    if course_filter:
+        try:
+            course_filter = int(course_filter)
+        except (ValueError, TypeError):
+            course_filter = None
+    
+    date_range = None
+    start_date_str = request.GET.get('start_date')
+    end_date_str = request.GET.get('end_date')
+    if start_date_str or end_date_str:
+        try:
+            start_date = datetime.fromisoformat(start_date_str) if start_date_str else None
+            end_date = datetime.fromisoformat(end_date_str) if end_date_str else None
+            if start_date or end_date:
+                if start_date and timezone.is_naive(start_date):
+                    start_date = timezone.make_aware(start_date)
+                if end_date and timezone.is_naive(end_date):
+                    end_date = timezone.make_aware(end_date)
+                date_range = (start_date, end_date)
+        except (ValueError, AttributeError):
+            date_range = None
+    
+    # Generate report with snapshot isolation
+    try:
+        report_data = generate_grade_audit_report(
+            user=request.user,
+            snapshot_time=snapshot_time,
+            course_filter=course_filter,
+            date_range=date_range
+        )
+    except PermissionError as e:
+        raise PermissionDenied(str(e))
+    
+    # Get historical snapshots for time travel
+    historical_snapshots = get_historical_snapshots(request.user, limit=20)
+    weekly_snapshots = get_weekly_snapshot_times()
+    
+    # Get all courses for filter dropdown
+    all_courses = Course.objects.all().order_by('code')
+    
+    return render(request, 'outcomes/grade_audit_report.html', {
+        'report_data': report_data,
+        'historical_snapshots': historical_snapshots,
+        'weekly_snapshots': weekly_snapshots,
+        'courses': all_courses,
+        'selected_course': course_filter,
+        'selected_snapshot_time': snapshot_time,
+        'date_range': date_range,
+    })
 
 
 @login_required

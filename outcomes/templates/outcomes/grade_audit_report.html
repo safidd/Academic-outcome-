@@ -1,0 +1,228 @@
+{% extends 'users/base.html' %}
+{% load dict_filters %}
+
+{% block title %}Grade Audit Report - Academic Outcome Tracker{% endblock %}
+
+{% block content %}
+<div class="cyber-hero mb-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between gap-3 align-items-start">
+        <div>
+            <p class="cyber-eyebrow mb-2">Department Head · Grade Audit</p>
+            <h2 class="mb-2">Grade Audit Report with Snapshot Isolation</h2>
+            <p class="metric-subtext mb-0">
+                Generate consistent snapshots of grade data at specific points in time. 
+                Prevents read skew by using Multi-Version Concurrency Control (MVCC).
+            </p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <span class="cyber-chip">Snapshot: {{ report_data.snapshot_time|date:"Y-m-d H:i:s" }}</span>
+            <span class="cyber-chip">Records: {{ report_data.summary.total_grades }}</span>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-lg-3">
+        <div class="cyber-panel">
+            <div class="cyber-panel-header">
+                <h4 class="mb-0">Report Filters</h4>
+            </div>
+            <div class="cyber-panel-body">
+                <form method="get" id="auditFilterForm">
+                    <div class="mb-3">
+                        <label for="course_id" class="form-label">Course</label>
+                        <select name="course_id" id="course_id" class="form-select">
+                            <option value="">All Courses</option>
+                            {% for course in courses %}
+                                <option value="{{ course.id }}" {% if selected_course == course.id %}selected{% endif %}>
+                                    {{ course.code }} - {{ course.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="snapshot_time" class="form-label">Snapshot Time (Time Travel)</label>
+                        <input type="datetime-local" name="snapshot_time" id="snapshot_time" 
+                               class="form-control" 
+                               value="{% if selected_snapshot_time %}{{ selected_snapshot_time|date:'Y-m-d\TH:i' }}{% endif %}">
+                        <small class="form-text text-muted">View grades as they existed at this point in time</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="start_date" class="form-label">Start Date</label>
+                        <input type="date" name="start_date" id="start_date" 
+                               class="form-control" 
+                               value="{% if date_range.0 %}{{ date_range.0|date:'Y-m-d' }}{% endif %}">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="end_date" class="form-label">End Date</label>
+                        <input type="date" name="end_date" id="end_date" 
+                               class="form-control" 
+                               value="{% if date_range.1 %}{{ date_range.1|date:'Y-m-d' }}{% endif %}">
+                    </div>
+                    
+                    <button type="submit" class="glow-button w-100">Generate Report</button>
+                </form>
+            </div>
+        </div>
+        
+        <div class="cyber-panel mt-4">
+            <div class="cyber-panel-header">
+                <h4 class="mb-0">Quick Time Travel</h4>
+            </div>
+            <div class="cyber-panel-body">
+                <p class="small mb-2">View grades at end of week:</p>
+                {% for week_snapshot in weekly_snapshots %}
+                    <a href="?snapshot_time={{ week_snapshot|date:'Y-m-d\TH:i' }}" 
+                       class="btn btn-sm btn-outline-primary w-100 mb-2">
+                        Week ending {{ week_snapshot|date:"M j, Y" }}
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-9">
+        <div class="cyber-panel">
+            <div class="cyber-panel-header d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">Grade Audit Report</h4>
+                <div>
+                    <span class="badge bg-info">Snapshot Isolation Active</span>
+                </div>
+            </div>
+            <div class="cyber-panel-body">
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <p class="cyber-eyebrow mb-1">Total Grades</p>
+                        <p class="metric-value">{{ report_data.summary.total_grades }}</p>
+                    </div>
+                    <div class="col-md-3">
+                        <p class="cyber-eyebrow mb-1">Total Students</p>
+                        <p class="metric-value">{{ report_data.summary.total_students }}</p>
+                    </div>
+                    <div class="col-md-3">
+                        <p class="cyber-eyebrow mb-1">Total Courses</p>
+                        <p class="metric-value">{{ report_data.summary.total_courses }}</p>
+                    </div>
+                    <div class="col-md-3">
+                        <p class="cyber-eyebrow mb-1">Average Score</p>
+                        <p class="metric-value">{{ report_data.summary.average_score }}%</p>
+                    </div>
+                </div>
+                
+                {% if report_data.grades %}
+                    <div class="table-responsive neon-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Student</th>
+                                    <th>Course</th>
+                                    <th>Learning Outcome</th>
+                                    <th class="text-end">Score</th>
+                                    <th>Created At</th>
+                                    <th>Updated At</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for grade in report_data.grades %}
+                                    <tr>
+                                        <td><strong>{{ grade.student.get_full_name|default:grade.student.username }}</strong></td>
+                                        <td>{{ grade.course.code }} - {{ grade.course.name }}</td>
+                                        <td>{{ grade.learning_outcome.code }}</td>
+                                        <td class="text-end">
+                                            <span class="badge fw-semibold" 
+                                                  style="background: {% if grade.score >= 80 %}rgba(40, 167, 69, 0.2){% elif grade.score >= 60 %}rgba(255, 193, 7, 0.2){% else %}rgba(220, 53, 69, 0.2){% endif %}; 
+                                                         color: {% if grade.score >= 80 %}#28a745{% elif grade.score >= 60 %}#ffc107{% else %}#dc3545{% endif %};">
+                                                {{ grade.score }}%
+                                            </span>
+                                        </td>
+                                        <td>{{ grade.created_at|date:"Y-m-d H:i" }}</td>
+                                        <td>{{ grade.updated_at|date:"Y-m-d H:i" }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info mb-0">
+                        No grades found matching the selected filters.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="cyber-panel mt-4">
+            <div class="cyber-panel-header">
+                <h4 class="mb-0">Audit History</h4>
+            </div>
+            <div class="cyber-panel-body">
+                {% if historical_snapshots %}
+                    <div class="table-responsive neon-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Snapshot Time</th>
+                                    <th>Accessed At</th>
+                                    <th class="text-end">Records</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for snapshot in historical_snapshots %}
+                                    <tr>
+                                        <td>{{ snapshot.snapshot_time|date:"Y-m-d H:i:s" }}</td>
+                                        <td>{{ snapshot.accessed_at|date:"Y-m-d H:i:s" }}</td>
+                                        <td class="text-end">{{ snapshot.records_count }}</td>
+                                        <td>
+                                            <a href="?snapshot_time={{ snapshot.snapshot_time|date:'Y-m-d\TH:i' }}" 
+                                               class="btn btn-sm btn-outline-primary">
+                                                View Snapshot
+                                            </a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info mb-0">
+                        No audit history available.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .neon-table table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .neon-table thead th {
+        background: var(--bg-secondary);
+        color: var(--text-secondary);
+        padding: 1rem;
+        text-align: left;
+        font-weight: 600;
+        border-bottom: 2px solid var(--accent);
+    }
+    
+    .neon-table tbody td {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--border);
+    }
+    
+    .neon-table tbody tr:hover {
+        background-color: rgba(255, 107, 53, 0.05);
+    }
+    
+    .dark-theme .neon-table tbody tr:hover {
+        background-color: rgba(255, 107, 53, 0.1);
+    }
+</style>
+{% endblock %}
+

@@ -61,6 +61,15 @@
     <div class="col-md-3">
         <div class="cyber-panel">
             <div class="cyber-panel-body">
+                <p class="cyber-eyebrow mb-1">Grade Audit</p>
+                <p class="metric-value">Snapshot</p>
+                <a href="{% url 'head:grade_audit_report' %}" class="btn btn-primary btn-sm mt-2">Grade Audit Report</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="cyber-panel">
+            <div class="cyber-panel-body">
                 <p class="cyber-eyebrow mb-1">Tracked outcomes</p>
                 <p class="metric-value">{{ tracked_po_count }}</p>
                 <p style="color: var(--text-muted);" class="mb-0">Capture learning outcome grades to unlock analytics.</p>

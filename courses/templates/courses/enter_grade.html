@@ -191,68 +191,83 @@
     // Get CSRF token from form or cookie
     const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || getCookie('csrftoken');
     
+    // Function to load learning outcomes for a course
+    function loadLearningOutcomes(courseId, learningOutcomeSelect) {
+        if (!learningOutcomeSelect) {
+            console.error('Learning outcome select not found');
+            return;
+        }
+        
+        // Clear and show loading
+        learningOutcomeSelect.innerHTML = '<option value="">Loading...</option>';
+        learningOutcomeSelect.disabled = true;
+
+        if (courseId) {
+            // Build the URL using template tag
+            const baseUrl = '{% url "instructor:get_learning_outcomes" 999 %}';
+            const url = baseUrl.replace('999', courseId);
+            
+            fetch(url, {
+                method: 'GET',
+                headers: {
+                    'X-CSRFToken': csrftoken || '',
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'same-origin'
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    learningOutcomeSelect.innerHTML = '<option value="">Select Learning Outcome</option>';
+                    
+                    if (data.learning_outcomes && data.learning_outcomes.length > 0) {
+                        data.learning_outcomes.forEach(lo => {
+                            const option = document.createElement('option');
+                            option.value = lo.id;
+                            option.textContent = lo.description;
+                            // Select if this was the previously selected value
+                            {% if form.learning_outcome.value %}
+                            if (lo.id == {{ form.learning_outcome.value }}) {
+                                option.selected = true;
+                            }
+                            {% endif %}
+                            learningOutcomeSelect.appendChild(option);
+                        });
+                    } else {
+                        learningOutcomeSelect.innerHTML = '<option value="">No learning outcomes found</option>';
+                    }
+                    learningOutcomeSelect.disabled = false;
+                })
+                .catch((error) => {
+                    console.error('Error loading learning outcomes:', error);
+                    learningOutcomeSelect.innerHTML = '<option value="">Error loading learning outcomes</option>';
+                    learningOutcomeSelect.disabled = false;
+                });
+        } else {
+            learningOutcomeSelect.innerHTML = '<option value="">Select a course first</option>';
+            learningOutcomeSelect.disabled = true;
+        }
+    }
+    
     // Wait for DOM to be ready
     document.addEventListener('DOMContentLoaded', function() {
         const courseSelect = document.getElementById('{{ form.course.id_for_label }}');
         const learningOutcomeSelect = document.getElementById('{{ form.learning_outcome.id_for_label }}');
         
-        if (courseSelect) {
+        if (courseSelect && learningOutcomeSelect) {
+            // Load learning outcomes when course changes
             courseSelect.addEventListener('change', function() {
-                const courseId = this.value;
-                
-                if (!learningOutcomeSelect) {
-                    console.error('Learning outcome select not found');
-                    return;
-                }
-                
-                // Clear and show loading
-                learningOutcomeSelect.innerHTML = '<option value="">Loading...</option>';
-                learningOutcomeSelect.disabled = true;
-
-                if (courseId) {
-                    // Build the URL using template tag
-                    const baseUrl = '{% url "instructor:get_learning_outcomes" 999 %}';
-                    const url = baseUrl.replace('999', courseId);
-                    
-                    fetch(url, {
-                        method: 'GET',
-                        headers: {
-                            'X-CSRFToken': csrftoken || '',
-                            'Content-Type': 'application/json',
-                        },
-                        credentials: 'same-origin'
-                    })
-                        .then(response => {
-                            if (!response.ok) {
-                                throw new Error(`HTTP error! status: ${response.status}`);
-                            }
-                            return response.json();
-                        })
-                        .then(data => {
-                            learningOutcomeSelect.innerHTML = '<option value="">Select Learning Outcome</option>';
-                            
-                            if (data.learning_outcomes && data.learning_outcomes.length > 0) {
-                                data.learning_outcomes.forEach(lo => {
-                                    const option = document.createElement('option');
-                                    option.value = lo.id;
-                                    option.textContent = lo.description;
-                                    learningOutcomeSelect.appendChild(option);
-                                });
-                            } else {
-                                learningOutcomeSelect.innerHTML = '<option value="">No learning outcomes found</option>';
-                            }
-                            learningOutcomeSelect.disabled = false;
-                        })
-                        .catch((error) => {
-                            console.error('Error loading learning outcomes:', error);
-                            learningOutcomeSelect.innerHTML = '<option value="">Error loading learning outcomes</option>';
-                            learningOutcomeSelect.disabled = false;
-                        });
-                } else {
-                    learningOutcomeSelect.innerHTML = '<option value="">Select a course first</option>';
-                    learningOutcomeSelect.disabled = true;
-                }
+                loadLearningOutcomes(this.value, learningOutcomeSelect);
             });
+            
+            // Load learning outcomes on page load if course is already selected
+            if (courseSelect.value) {
+                loadLearningOutcomes(courseSelect.value, learningOutcomeSelect);
+            }
         }
     });
     
